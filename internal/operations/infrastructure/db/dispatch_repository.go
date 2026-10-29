@@ -29,14 +29,14 @@ var ErrConcurrencyConflict = errors.New("operations: dispatch concurrency confli
 // later increment; NoopRecorder drops events (like rdt's unsubscribed
 // InMemoryEventPublisher).
 type EventRecorder interface {
-	Record(ctx context.Context, q coredb.DBTX, events []domain.DomainEvent) error
+	Record(ctx context.Context, q coredb.DBTX, events []domain.RecordedEvent) error
 }
 
 // NoopRecorder discards pulled events.
 type NoopRecorder struct{}
 
 // Record implements EventRecorder by doing nothing.
-func (NoopRecorder) Record(context.Context, coredb.DBTX, []domain.DomainEvent) error { return nil }
+func (NoopRecorder) Record(context.Context, coredb.DBTX, []domain.RecordedEvent) error { return nil }
 
 // DispatchRepository loads and stores the Dispatch aggregate. Bind it to a
 // DBTX: a *pgxpool.Pool for reads, or the tx from a UnitOfWork for writes

@@ -339,7 +339,6 @@ func (d *Dispatch) currentAssignment() *Assignment {
 func (d *Dispatch) Delegate(dispatcherID DispatcherID) {
 	d.dispatcherID = &dispatcherID
 	d.RecordEvents(DispatchDelegated{
-		BaseEvent:      newBase(),
 		DispatchID:     d.id,
 		ToDispatcherID: dispatcherID,
 	})
@@ -379,11 +378,10 @@ func (d *Dispatch) Assign(driverID *DriverID, truckID *TruckID) (AssignmentID, e
 
 	if d.status == StatusReady {
 		d.status = StatusQueued
-		d.RecordEvents(DispatchRequeued{BaseEvent: newBase(), DispatchID: d.id})
+		d.RecordEvents(DispatchRequeued{DispatchID: d.id})
 	}
 	if driverID != nil && truckID != nil {
 		d.RecordEvents(AssignmentProposed{
-			BaseEvent:    newBase(),
 			DispatchID:   d.id,
 			AssignmentID: *d.currentAssignmentID,
 			DriverID:     *driverID,
@@ -412,7 +410,6 @@ func (d *Dispatch) Approve() error {
 	d.status = StatusReady
 	assignee, _ := d.CurrentAssignee()
 	d.RecordEvents(DispatchApproved{
-		BaseEvent:  newBase(),
 		DispatchID: d.id,
 		DriverID:   assignee.Driver,
 		TruckID:    assignee.Truck,
@@ -427,7 +424,7 @@ func (d *Dispatch) Start() error {
 	}
 	d.currentAssignment().activate()
 	d.status = StatusInProgress
-	d.RecordEvents(DispatchStarted{BaseEvent: newBase(), DispatchID: d.id})
+	d.RecordEvents(DispatchStarted{DispatchID: d.id})
 	return nil
 }
 
@@ -438,7 +435,6 @@ func (d *Dispatch) Verify() error {
 	}
 	d.status = StatusVerified
 	d.RecordEvents(DispatchVerified{
-		BaseEvent:     newBase(),
 		DispatchID:    d.id,
 		SourceQuoteID: d.sourceQuoteID,
 	})
@@ -455,11 +451,11 @@ func (d *Dispatch) Hold() (AgendaItemID, error) {
 	}
 	if item.action == ActionHoldForLoading {
 		d.RecordEvents(DispatchHeldForLoading{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID),
+			DispatchID: d.id, FacilityID: deref(item.facilityID),
 		})
 	} else {
 		d.RecordEvents(DispatchHeldForEmptying{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID),
+			DispatchID: d.id, FacilityID: deref(item.facilityID),
 		})
 	}
 	return item.id, nil
@@ -479,7 +475,7 @@ func (d *Dispatch) AcquireChassis(facilityID FacilityID, chassisNumber ChassisNu
 		status:        CustodyOpened,
 	})
 	d.RecordEvents(ChassisAcquired{
-		BaseEvent: newBase(), DispatchID: d.id, FacilityID: facilityID, ChassisNumber: chassisNumber,
+		DispatchID: d.id, FacilityID: facilityID, ChassisNumber: chassisNumber,
 	})
 	return item.id, nil
 }
@@ -498,8 +494,8 @@ func (d *Dispatch) ReturnChassis(facilityID FacilityID) (AgendaItemID, error) {
 	}
 	d.currentAssignment().conclude()
 	d.RecordEvents(
-		ChassisReturned{BaseEvent: newBase(), DispatchID: d.id, FacilityID: facilityID, ChassisNumber: chassisNumber},
-		DispatchCompleted{BaseEvent: newBase(), DispatchID: d.id, SourceQuoteID: d.sourceQuoteID},
+		ChassisReturned{DispatchID: d.id, FacilityID: facilityID, ChassisNumber: chassisNumber},
+		DispatchCompleted{DispatchID: d.id, SourceQuoteID: d.sourceQuoteID},
 	)
 	return item.id, nil
 }
@@ -517,11 +513,11 @@ func (d *Dispatch) PickUpContainer() (AgendaItemID, error) {
 	eq, _ := d.LiveEquipment()
 	if item.action == ActionPickUpLoadedContainer {
 		d.RecordEvents(LoadedContainerPickedUp{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerPickedUp{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
 		})
 	}
 	return item.id, nil
@@ -548,15 +544,15 @@ func (d *Dispatch) PickUpPremountedContainer(chassisNumber ChassisNumber) (Agend
 	var pickup domain.DomainEvent
 	if item.action == ActionPickUpLoadedPremountedContainer {
 		pickup = LoadedContainerPickedUp{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
 		}
 	} else {
 		pickup = EmptyContainerPickedUp{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
 		}
 	}
 	d.RecordEvents(
-		ChassisAcquired{BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ChassisNumber: chassisNumber},
+		ChassisAcquired{DispatchID: d.id, FacilityID: deref(item.facilityID), ChassisNumber: chassisNumber},
 		pickup,
 	)
 	return item.id, nil
@@ -571,11 +567,11 @@ func (d *Dispatch) DeliverContainer() (AgendaItemID, error) {
 	eq, _ := d.LiveEquipment()
 	if item.action == ActionDeliverLoadedContainer {
 		d.RecordEvents(LoadedContainerDelivered{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerDelivered{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
 		})
 	}
 	return item.id, nil
@@ -591,14 +587,14 @@ func (d *Dispatch) TakeContainer() (AgendaItemID, error) {
 	eq, _ := d.LiveEquipment()
 	if item.action == ActionTakeLoadedContainer {
 		d.RecordEvents(LoadedContainerTaken{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerTaken{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
 		})
 	}
-	d.RecordEvents(DispatchReleased{BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID)})
+	d.RecordEvents(DispatchReleased{DispatchID: d.id, FacilityID: deref(item.facilityID)})
 	return item.id, nil
 }
 
@@ -613,11 +609,11 @@ func (d *Dispatch) DropContainer() (AgendaItemID, error) {
 	containerNumber := eq.Container
 	if item.action == ActionDropLoadedContainer {
 		d.RecordEvents(LoadedContainerDropped{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerDropped{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
 		})
 	}
 	if episode := d.ContainerEpisode(containerNumber); episode != nil {
@@ -646,19 +642,19 @@ func (d *Dispatch) DropPremountedContainer() (AgendaItemID, error) {
 	var deliver domain.DomainEvent
 	if item.action == ActionDropEmptyPremountedContainer {
 		deliver = EmptyContainerDropped{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
 		}
 	} else {
 		deliver = LoadedContainerDropped{
-			BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
 		}
 	}
 	d.RecordEvents(
-		ChassisReturned{BaseEvent: newBase(), DispatchID: d.id, FacilityID: deref(item.facilityID), ChassisNumber: chassisNumber},
+		ChassisReturned{DispatchID: d.id, FacilityID: deref(item.facilityID), ChassisNumber: chassisNumber},
 		deliver,
 	)
 	if d.agendaCompleted() {
-		d.RecordEvents(DispatchCompleted{BaseEvent: newBase(), DispatchID: d.id, SourceQuoteID: d.sourceQuoteID})
+		d.RecordEvents(DispatchCompleted{DispatchID: d.id, SourceQuoteID: d.sourceQuoteID})
 	}
 	return item.id, nil
 }
@@ -753,7 +749,6 @@ func QueueFromSpecs(sourceQuoteID *SourceQuoteID, specs []AgendaItemSpec, planTy
 		status:            StatusQueued,
 	}
 	d.RecordEvents(DispatchQueued{
-		BaseEvent:     newBase(),
 		DispatchID:    d.id,
 		SourceQuoteID: d.sourceQuoteID,
 	})

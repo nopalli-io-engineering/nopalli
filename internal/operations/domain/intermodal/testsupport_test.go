@@ -10,24 +10,25 @@ import (
 // Shared test support, porting rdt's tests/helpers.py. (rdt's *_committed
 // helpers referenced a non-existent AssignmentStatus.COMMITTED and are dropped.)
 
-// eventTypeNames returns the concrete type name of each event, in order (rdt:
-// types_of).
-func eventTypeNames(events []domain.DomainEvent) []string {
+// eventTypeNames returns the concrete payload type name of each recorded event,
+// in order (rdt: types_of). The payload is the embedded DomainEvent on the
+// envelope.
+func eventTypeNames(events []domain.RecordedEvent) []string {
 	out := make([]string, len(events))
 	for i, e := range events {
-		out[i] = reflect.TypeOf(e).Name()
+		out[i] = reflect.TypeOf(e.DomainEvent).Name()
 	}
 	return out
 }
 
-// oneEvent asserts exactly one event of type T is present and returns it (rdt:
-// one).
-func oneEvent[T domain.DomainEvent](t *testing.T, events []domain.DomainEvent) T {
+// oneEvent asserts exactly one recorded event has payload type T and returns
+// that payload (rdt: one).
+func oneEvent[T domain.DomainEvent](t *testing.T, events []domain.RecordedEvent) T {
 	t.Helper()
 	var found T
 	count := 0
 	for _, e := range events {
-		if ev, ok := e.(T); ok {
+		if ev, ok := e.DomainEvent.(T); ok {
 			found = ev
 			count++
 		}
@@ -49,7 +50,7 @@ func trackFrom(d *Dispatch) *eventTracker {
 	return &eventTracker{d: d, seen: len(d.Events())}
 }
 
-func (tr *eventTracker) since() []domain.DomainEvent {
+func (tr *eventTracker) since() []domain.RecordedEvent {
 	all := tr.d.Events()
 	fresh := all[tr.seen:]
 	tr.seen = len(all)
@@ -74,7 +75,7 @@ func assertAgendaItemCompletedBy(t *testing.T, d *Dispatch, id AgendaItemID, by 
 	}
 }
 
-func assertTypeNames(t *testing.T, events []domain.DomainEvent, want ...string) {
+func assertTypeNames(t *testing.T, events []domain.RecordedEvent, want ...string) {
 	t.Helper()
 	got := eventTypeNames(events)
 	if len(got) != len(want) {

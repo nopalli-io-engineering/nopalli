@@ -6,41 +6,33 @@ import (
 	"github.com/google/uuid"
 )
 
-// DomainEvent is implemented by every domain event (rdt: core.domain.event.
-// DomainEvent). SubjectID is the id of the aggregate the event is about — what
-// the transactional outbox records as aggregate_id — returned as a raw UUID
-// because the outbox is generic and does not know the concrete id type.
+// DomainEvent is a domain event payload: it knows only which aggregate it is
+// about (rdt: core.domain.event.DomainEvent.subject_id). The delivery envelope
+// — a unique, time-ordered id and the instant it occurred — is NOT the
+// aggregate method's concern; it is stamped once, at record time, by
+// Root.RecordEvents. So concrete events carry only their domain fields and a
+// SubjectID method, never a hand-built envelope.
 type DomainEvent interface {
-	EventID() uuid.UUID
-	OccurredAt() time.Time
 	SubjectID() uuid.UUID
 }
 
-// BaseEvent supplies the event_id and occurred_at that every event carries.
-// Embed it in each concrete event struct and construct it with NewBaseEvent;
-// the concrete event supplies SubjectID.
-//
-//	type DispatchQueued struct {
-//	    domain.BaseEvent
-//	    DispatchID DispatchID
-//	}
-//	func (e DispatchQueued) SubjectID() uuid.UUID { return e.DispatchID.UUID() }
-type BaseEvent struct {
-	eventID    uuid.UUID
-	occurredAt time.Time
+// RecordedEvent is a domain event plus the envelope stamped when it was
+// recorded. This is what PullEvents returns and what the transactional outbox
+// persists: EventID → messages.event_id, SubjectID → messages.aggregate_id,
+// OccurredAt → messages.occurred_at, and the embedded DomainEvent is the
+// payload to serialize.
+type RecordedEvent struct {
+	DomainEvent
+	EventID    uuid.UUID
+	OccurredAt time.Time
 }
 
-// NewBaseEvent stamps a fresh event id (v7, time-ordered) and the current UTC
-// instant, matching rdt's default_factory fields.
-func NewBaseEvent() BaseEvent {
-	return BaseEvent{
-		eventID:    uuid.Must(uuid.NewV7()),
-		occurredAt: time.Now().UTC(),
+// recordEvent attaches a fresh envelope (v7 id, current UTC instant) to a
+// payload — the single place event metadata is minted.
+func recordEvent(e DomainEvent) RecordedEvent {
+	return RecordedEvent{
+		DomainEvent: e,
+		EventID:     uuid.Must(uuid.NewV7()),
+		OccurredAt:  time.Now().UTC(),
 	}
 }
-
-// EventID returns this event's own identity.
-func (e BaseEvent) EventID() uuid.UUID { return e.eventID }
-
-// OccurredAt returns when the event was recorded (UTC).
-func (e BaseEvent) OccurredAt() time.Time { return e.occurredAt }
