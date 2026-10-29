@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
+	"github.com/nopalli-io/nopalli/internal/core/infrastructure/outbox"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
 )
 
@@ -15,14 +16,14 @@ import (
 // stay free of pgx — it sees only application.Repository.
 type UnitOfWork struct {
 	core     *coredb.UnitOfWork
-	recorder EventRecorder
+	recorder outbox.Recorder
 }
 
 // NewUnitOfWork builds the adapter over a pool. A nil recorder drops events
-// (NoopRecorder) until the transactional outbox is wired in.
-func NewUnitOfWork(pool *pgxpool.Pool, recorder EventRecorder) *UnitOfWork {
+// (outbox.Noop) until the transactional outbox is wired in.
+func NewUnitOfWork(pool *pgxpool.Pool, recorder outbox.Recorder) *UnitOfWork {
 	if recorder == nil {
-		recorder = NoopRecorder{}
+		recorder = outbox.Noop{}
 	}
 	return &UnitOfWork{core: coredb.NewUnitOfWork(pool), recorder: recorder}
 }

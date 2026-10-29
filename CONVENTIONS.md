@@ -102,9 +102,12 @@ nopalli **owns its own database and migrations** (it does not share rdt's DB).
   contract — `Snapshot()` / `Reconstitute()` (the Go analogue of rdt's
   imperative mapping) — and infrastructure maps `Snapshot ↔ rows` with pgx.
   Infra never touches aggregate internals; `Reconstitute` raises no events.
-- **Read side (CQRS queries / read models)** will use **`sqlc`** when we get
-  there; the aggregate write-side repository is hand-written pgx (fixed
-  statement set, manual mapping either way, no codegen in the build).
+- **Read side (CQRS queries / read models)**: flat pgx SELECTs over the root
+  table, shaped straight into read-model DTOs (`application.DispatchSummary` /
+  `DispatchDetail`) behind the `application.DispatchQueries` port — never by
+  hydrating the aggregate. Hand-written pgx (not sqlc) to stay consistent with
+  the write side and keep codegen out of the build; revisit sqlc if the query
+  set grows large. Read-side authz is `Visibility` (filter, don't reject).
 - **Transactions**: `coredb.UnitOfWork.Do(ctx, fn)` brackets a `pgx.Tx`;
   repositories bind to the `DBTX` (pool for reads, tx for `Add`/`Save`).
 - **Optimistic concurrency** via a `version` column: `Save` does

@@ -14,8 +14,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
+	"github.com/nopalli-io/nopalli/internal/core/infrastructure/outbox"
 	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
 )
 
@@ -23,35 +23,20 @@ import (
 // matches the aggregate's — another writer committed first (optimistic lock).
 var ErrConcurrencyConflict = errors.New("operations: dispatch concurrency conflict")
 
-// EventRecorder is the seam for the transactional outbox: Save hands it the
-// events pulled from the aggregate, within the same DBTX, so they can be
-// written atomically with the state change. The real outbox adapter lands in a
-// later increment; NoopRecorder drops events (like rdt's unsubscribed
-// InMemoryEventPublisher).
-type EventRecorder interface {
-	Record(ctx context.Context, q coredb.DBTX, events []domain.RecordedEvent) error
-}
-
-// NoopRecorder discards pulled events.
-type NoopRecorder struct{}
-
-// Record implements EventRecorder by doing nothing.
-func (NoopRecorder) Record(context.Context, coredb.DBTX, []domain.RecordedEvent) error { return nil }
-
 // DispatchRepository loads and stores the Dispatch aggregate. Bind it to a
 // DBTX: a *pgxpool.Pool for reads, or the tx from a UnitOfWork for writes
 // (Add/Save must run inside a transaction to be atomic across the root and its
 // child tables).
 type DispatchRepository struct {
 	db     coredb.DBTX
-	events EventRecorder
+	events outbox.Recorder
 }
 
 // NewDispatchRepository builds a repository over a DBTX. A nil recorder means
-// events are dropped (NoopRecorder).
-func NewDispatchRepository(db coredb.DBTX, recorder EventRecorder) *DispatchRepository {
+// events are dropped (outbox.Noop).
+func NewDispatchRepository(db coredb.DBTX, recorder outbox.Recorder) *DispatchRepository {
 	if recorder == nil {
-		recorder = NoopRecorder{}
+		recorder = outbox.Noop{}
 	}
 	return &DispatchRepository{db: db, events: recorder}
 }
