@@ -96,7 +96,11 @@ ported.)
 nopalli **owns its own database and migrations** (it does not share rdt's DB).
 
 - **Driver**: `jackc/pgx/v5` (+ `pgxpool`). **Migrations**: `pressly/goose` over an
-  embedded FS (`internal/migrations`), applied with `coredb.Migrate`.
+  embedded FS (`internal/migrations`). Applied as an **explicit step**, not on
+  server boot: run `cmd/migrate` (`make migrate`, or `go run ./cmd/migrate
+  [up|down|status|version|…]`) before starting the api. `coredb.Migrate` (goose
+  "up", the thin wrapper tests use) and `coredb.RunMigrations` (any goose
+  command) both serialize concurrent migrators with a session advisory lock.
 - **No ORM for aggregates.** GORM/ent fight our unexported fields, distinct id
   types and value objects. Instead each aggregate exposes a persistence
   contract — `Snapshot()` / `Reconstitute()` (the Go analogue of rdt's

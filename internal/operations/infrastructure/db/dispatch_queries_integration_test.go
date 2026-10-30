@@ -140,3 +140,80 @@ func TestIntegration_DispatchQueries(t *testing.T) {
 		}
 	}
 }
+
+// TestIntegration_DispatchDetailChildren checks that GetDispatch projects the
+// owned child collections, each carrying its audit timestamps.
+func TestIntegration_DispatchDetailChildren(t *testing.T) {
+	ctx := context.Background()
+	dsn := dsnOrSkip(t)
+	if err := coredb.Migrate(ctx, dsn); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	pool, err := coredb.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	uow := coredb.NewUnitOfWork(pool)
+	q := opsdb.NewDispatchQueryService(pool)
+
+	d := liveLoadDispatch(t)
+	id := d.ID().UUID()
+	if err := uow.Do(ctx, func(tx coredb.DBTX) error {
+		return opsdb.NewDispatchRepository(tx, nil).Add(ctx, d)
+	}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	if err := uow.Do(ctx, func(tx coredb.DBTX) error {
+		repo := opsdb.NewDispatchRepository(tx, nil)
+		loaded, err := repo.Get(ctx, d.ID())
+		if err != nil {
+			return err
+		}
+		loaded.Delegate(intermodal.NewDispatcherID())
+		driver, truck := intermodal.NewDriverID(), intermodal.NewTruckID()
+		if _, err := loaded.Assign(&driver, &truck); err != nil {
+			return err
+		}
+		if err := loaded.Approve(); err != nil {
+			return err
+		}
+		if err := loaded.Start(); err != nil {
+			return err
+		}
+		chassis, _ := intermodal.NewChassisNumber("CHAS-1")
+		if _, err := loaded.AcquireChassis(intermodal.NewFacilityID(), chassis); err != nil {
+			return err
+		}
+		return repo.Save(ctx, loaded)
+	}); err != nil {
+		t.Fatalf("advance+save: %v", err)
+	}
+
+	detail, err := q.GetDispatch(ctx, id, application.VisibleAll())
+	if err != nil || detail == nil {
+		t.Fatalf("get: detail=%v err=%v", detail, err)
+	}
+
+	if len(detail.AgendaItems) == 0 {
+		t.Fatal("expected agenda items on the detail")
+	}
+	for _, i := range detail.AgendaItems {
+		if i.CreatedAt.IsZero() || i.UpdatedAt.IsZero() {
+			t.Fatalf("agenda item %v missing timestamps: %+v", i.ID, i)
+		}
+	}
+	if len(detail.Assignments) != 1 {
+		t.Fatalf("assignments = %d, want 1", len(detail.Assignments))
+	}
+	if detail.Assignments[0].CreatedAt.IsZero() {
+		t.Fatal("assignment missing created_at")
+	}
+	if len(detail.ChassisEpisodes) == 0 {
+		t.Fatal("expected a chassis custody episode after acquire")
+	}
+	if ch := detail.ChassisEpisodes[0]; ch.ChassisNumber == nil || *ch.ChassisNumber != "CHAS-1" {
+		t.Fatalf("chassis episode number = %v, want CHAS-1", ch.ChassisNumber)
+	}
+}

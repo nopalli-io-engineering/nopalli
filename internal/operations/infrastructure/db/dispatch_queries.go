@@ -114,7 +114,7 @@ WHERE id = $1`, pgtype.UUID{Bytes: id, Valid: true}).
 	if err != nil {
 		return nil, fmt.Errorf("operations: get dispatch: %w", err)
 	}
-	return &application.DispatchDetail{
+	detail := &application.DispatchDetail{
 		ID:            uuid.UUID(rowID.Bytes),
 		SourceQuoteID: optUUID(sourceQuote),
 		DispatcherID:  optUUID(dispatcher),
@@ -122,7 +122,163 @@ WHERE id = $1`, pgtype.UUID{Bytes: id, Valid: true}).
 		Status:        intermodal.Status(status),
 		CreatedAt:     createdAt.Time,
 		UpdatedAt:     updatedAt.Time,
-	}, nil
+	}
+
+	var loadErr error
+	if detail.AgendaItems, loadErr = q.agendaItemViews(ctx, id); loadErr != nil {
+		return nil, loadErr
+	}
+	if detail.Assignments, loadErr = q.assignmentViews(ctx, id); loadErr != nil {
+		return nil, loadErr
+	}
+	if detail.ChassisEpisodes, loadErr = q.chassisEpisodeViews(ctx, id); loadErr != nil {
+		return nil, loadErr
+	}
+	if detail.ContainerEpisodes, loadErr = q.containerEpisodeViews(ctx, id); loadErr != nil {
+		return nil, loadErr
+	}
+	return detail, nil
+}
+
+// --- child projections ---------------------------------------------------- //
+
+func (q *DispatchQueryService) agendaItemViews(ctx context.Context, id uuid.UUID) ([]application.AgendaItemView, error) {
+	rows, err := q.db.Query(ctx, `
+SELECT id, item_no, action, facility_id, status, attributed_driver, attributed_truck, created_at, updated_at
+FROM operations.intermodal_dispatch_agenda_items
+WHERE dispatch_id = $1
+ORDER BY item_no`, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("operations: list agenda items: %w", err)
+	}
+	defer rows.Close()
+
+	var out []application.AgendaItemView
+	for rows.Next() {
+		var (
+			itemID, facility, driver, truck pgtype.UUID
+			itemNo                          int32
+			action, status                  string
+			createdAt, updatedAt            pgtype.Timestamptz
+		)
+		if err := rows.Scan(&itemID, &itemNo, &action, &facility, &status, &driver, &truck, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("operations: scan agenda item view: %w", err)
+		}
+		out = append(out, application.AgendaItemView{
+			ID:               uuid.UUID(itemID.Bytes),
+			ItemNo:           int(itemNo),
+			Action:           intermodal.Action(action),
+			FacilityID:       optUUID(facility),
+			Status:           intermodal.AgendaItemStatus(status),
+			AttributedDriver: optUUID(driver),
+			AttributedTruck:  optUUID(truck),
+			CreatedAt:        createdAt.Time,
+			UpdatedAt:        updatedAt.Time,
+		})
+	}
+	return out, rows.Err()
+}
+
+func (q *DispatchQueryService) assignmentViews(ctx context.Context, id uuid.UUID) ([]application.AssignmentView, error) {
+	rows, err := q.db.Query(ctx, `
+SELECT id, driver_id, truck_id, status, created_at, updated_at
+FROM operations.intermodal_dispatch_assignments
+WHERE dispatch_id = $1
+ORDER BY created_at`, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("operations: list assignments: %w", err)
+	}
+	defer rows.Close()
+
+	var out []application.AssignmentView
+	for rows.Next() {
+		var (
+			assignmentID, driver, truck pgtype.UUID
+			status                      string
+			createdAt, updatedAt        pgtype.Timestamptz
+		)
+		if err := rows.Scan(&assignmentID, &driver, &truck, &status, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("operations: scan assignment view: %w", err)
+		}
+		out = append(out, application.AssignmentView{
+			ID:        uuid.UUID(assignmentID.Bytes),
+			DriverID:  optUUID(driver),
+			TruckID:   optUUID(truck),
+			Status:    intermodal.AssignmentStatus(status),
+			CreatedAt: createdAt.Time,
+			UpdatedAt: updatedAt.Time,
+		})
+	}
+	return out, rows.Err()
+}
+
+func (q *DispatchQueryService) chassisEpisodeViews(ctx context.Context, id uuid.UUID) ([]application.ChassisEpisodeView, error) {
+	rows, err := q.db.Query(ctx, `
+SELECT id, status, sourced_from, stationed_at, chassis_number, created_at, updated_at
+FROM operations.intermodal_dispatch_chassis_custody_episodes
+WHERE dispatch_id = $1
+ORDER BY created_at`, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("operations: list chassis episodes: %w", err)
+	}
+	defer rows.Close()
+
+	var out []application.ChassisEpisodeView
+	for rows.Next() {
+		var (
+			episodeID, sourcedFrom, stationedAt pgtype.UUID
+			status                              string
+			chassisNumber                       pgtype.Text
+			createdAt, updatedAt                pgtype.Timestamptz
+		)
+		if err := rows.Scan(&episodeID, &status, &sourcedFrom, &stationedAt, &chassisNumber, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("operations: scan chassis episode view: %w", err)
+		}
+		out = append(out, application.ChassisEpisodeView{
+			ID:            uuid.UUID(episodeID.Bytes),
+			Status:        intermodal.CustodyEpisodeStatus(status),
+			SourcedFrom:   uuid.UUID(sourcedFrom.Bytes),
+			StationedAt:   optUUID(stationedAt),
+			ChassisNumber: optText(chassisNumber),
+			CreatedAt:     createdAt.Time,
+			UpdatedAt:     updatedAt.Time,
+		})
+	}
+	return out, rows.Err()
+}
+
+func (q *DispatchQueryService) containerEpisodeViews(ctx context.Context, id uuid.UUID) ([]application.ContainerEpisodeView, error) {
+	rows, err := q.db.Query(ctx, `
+SELECT id, status, sourced_from, stationed_at, container_number, created_at, updated_at
+FROM operations.intermodal_dispatch_container_custody_episodes
+WHERE dispatch_id = $1
+ORDER BY created_at`, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("operations: list container episodes: %w", err)
+	}
+	defer rows.Close()
+
+	var out []application.ContainerEpisodeView
+	for rows.Next() {
+		var (
+			episodeID, sourcedFrom, stationedAt pgtype.UUID
+			status, containerNumber             string
+			createdAt, updatedAt                pgtype.Timestamptz
+		)
+		if err := rows.Scan(&episodeID, &status, &sourcedFrom, &stationedAt, &containerNumber, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("operations: scan container episode view: %w", err)
+		}
+		out = append(out, application.ContainerEpisodeView{
+			ID:              uuid.UUID(episodeID.Bytes),
+			Status:          intermodal.CustodyEpisodeStatus(status),
+			SourcedFrom:     uuid.UUID(sourcedFrom.Bytes),
+			StationedAt:     optUUID(stationedAt),
+			ContainerNumber: containerNumber,
+			CreatedAt:       createdAt.Time,
+			UpdatedAt:       updatedAt.Time,
+		})
+	}
+	return out, rows.Err()
 }
 
 // optUUID maps a scanned nullable uuid to a *uuid.UUID for the read model.
@@ -131,6 +287,15 @@ func optUUID(p pgtype.UUID) *uuid.UUID {
 		return nil
 	}
 	v := uuid.UUID(p.Bytes)
+	return &v
+}
+
+// optText maps a scanned nullable text to a *string for the read model.
+func optText(p pgtype.Text) *string {
+	if !p.Valid {
+		return nil
+	}
+	v := p.String
 	return &v
 }
 

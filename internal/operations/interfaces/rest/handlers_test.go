@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -377,6 +378,47 @@ func TestGetDispatch_OK(t *testing.T) {
 	}
 	if resp.ID != id.String() || resp.DispatcherID == nil || *resp.DispatcherID != dispatcher.String() {
 		t.Fatalf("detail = %+v, want id %s dispatcher %s", resp, id.String(), dispatcher.String())
+	}
+	// Child collections with no rows serialize as [] (present, not null).
+	if got := w.Body.String(); !strings.Contains(got, `"agenda_items":[]`) {
+		t.Fatalf("empty agenda_items should be [], body=%s", got)
+	}
+}
+
+func TestGetDispatch_IncludesChildren(t *testing.T) {
+	id := intermodal.NewDispatchID()
+	itemID := intermodal.NewAgendaItemID().UUID()
+	assignID := intermodal.NewAssignmentID().UUID()
+	now := time.Now().UTC()
+	q := &fakeQueries{detail: &application.DispatchDetail{
+		ID:       id.UUID(),
+		PlanType: intermodal.PlanLiveLoad,
+		Status:   intermodal.StatusInProgress,
+		AgendaItems: []application.AgendaItemView{{
+			ID: itemID, ItemNo: 1, Action: intermodal.ActionAcquireChassis,
+			Status: intermodal.AgendaItemPending, CreatedAt: now, UpdatedAt: now,
+		}},
+		Assignments: []application.AssignmentView{{
+			ID: assignID, Status: intermodal.AssignmentPending, CreatedAt: now, UpdatedAt: now,
+		}},
+	}}
+	mux := serveFull(&fakeService{}, q)
+	w := do(t, mux, http.MethodGet, dispatchesPath+"/"+id.String(), "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+	}
+	var resp rest.DispatchDetailResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.AgendaItems) != 1 || resp.AgendaItems[0].ID != itemID.String() {
+		t.Fatalf("agenda_items = %+v, want one with id %s", resp.AgendaItems, itemID)
+	}
+	if resp.AgendaItems[0].CreatedAt.IsZero() {
+		t.Fatal("agenda item created_at missing from wire view")
+	}
+	if len(resp.Assignments) != 1 || resp.Assignments[0].ID != assignID.String() {
+		t.Fatalf("assignments = %+v, want one with id %s", resp.Assignments, assignID)
 	}
 }
 

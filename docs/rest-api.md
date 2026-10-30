@@ -63,7 +63,9 @@ fields and rejects `AD_HOC` with 422 (no standard agenda to build).
 - **Composition root** (`cmd/api/main.go`): pool → `db.NewUnitOfWork` →
   `application.NewIntermodalDispatchService` → handlers → routes → `http.Server`.
   Per-request transactions already live inside the service's `UnitOfWork`, so
-  handlers are transaction-agnostic.
+  handlers are transaction-agnostic. The api does **not** migrate on boot; schema
+  migrations are a separate explicit step — run `cmd/migrate` (`make migrate`)
+  first.
 
 ## Error mapping (central)
 
@@ -113,7 +115,13 @@ driven by an `operations:intermodal_dispatch.read_all` grant. An out-of-scope
   `application.DispatchQueries` + `Visibility`, pgx adapter `db.DispatchQueryService`.
 - **Built — query endpoints**: `GET /dispatches` (status/limit/offset query
   params; empty list serialized as `[]`) and `GET /dispatches/{id}` in
-  `rest/reads.go`, over the `application.DispatchQueries` port. Reads scope via
+  `rest/reads.go`, over the `application.DispatchQueries` port. The detail view
+  projects the owned child collections (agenda items, assignments, chassis /
+  container custody episodes), each carrying its `created_at`/`updated_at` audit
+  timestamps; the child arrays are always present (empty, not null). The child
+  tables' audit columns are preserved across saves because the repository
+  reconciles children by UPSERT-by-id + delete-missing rather than
+  delete+insert. Reads scope via
   a `Handlers.visibility()` seam (returns `VisibleAll` until auth lands); an
   out-of-scope or unknown id is a 404, never leaking that the id is real.
   Response DTOs (`DispatchSummaryResponse`/`DispatchDetailResponse`) are

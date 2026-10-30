@@ -40,10 +40,9 @@ func run() error {
 		port = "8080"
 	}
 
+	// Schema migrations are a separate, explicit step (cmd/migrate), not a
+	// side effect of server start — run `migrate` before booting the api.
 	ctx := context.Background()
-	if err := coredb.Migrate(ctx, dsn); err != nil {
-		return err
-	}
 	pool, err := coredb.Connect(ctx, dsn)
 	if err != nil {
 		return err

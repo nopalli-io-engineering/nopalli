@@ -24,13 +24,65 @@ type DispatchSummary struct {
 	UpdatedAt     time.Time
 }
 
-// DispatchDetail is the single-dispatch projection (adds the dispatcher).
+// DispatchDetail is the single-dispatch projection: the root fields plus the
+// owned child collections, each a flat projection of its table (including the
+// per-row created_at/updated_at audit timestamps).
 type DispatchDetail struct {
+	ID                uuid.UUID
+	SourceQuoteID     *uuid.UUID // nil when the dispatch has no source quote
+	DispatcherID      *uuid.UUID // nil until delegated
+	PlanType          intermodal.PlanType
+	Status            intermodal.Status
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AgendaItems       []AgendaItemView
+	Assignments       []AssignmentView
+	ChassisEpisodes   []ChassisEpisodeView
+	ContainerEpisodes []ContainerEpisodeView
+}
+
+// AgendaItemView is the read projection of one agenda row. The details JSON
+// (container number) is not projected here; add it if a view needs it.
+type AgendaItemView struct {
+	ID               uuid.UUID
+	ItemNo           int
+	Action           intermodal.Action
+	FacilityID       *uuid.UUID
+	Status           intermodal.AgendaItemStatus
+	AttributedDriver *uuid.UUID
+	AttributedTruck  *uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+// AssignmentView is the read projection of one assignment row.
+type AssignmentView struct {
+	ID        uuid.UUID
+	DriverID  *uuid.UUID
+	TruckID   *uuid.UUID
+	Status    intermodal.AssignmentStatus
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// ChassisEpisodeView is the read projection of one chassis custody row.
+type ChassisEpisodeView struct {
 	ID            uuid.UUID
-	SourceQuoteID *uuid.UUID // nil when the dispatch has no source quote
-	DispatcherID  *uuid.UUID // nil until delegated
-	PlanType      intermodal.PlanType
-	Status        intermodal.Status
+	Status        intermodal.CustodyEpisodeStatus
+	SourcedFrom   uuid.UUID
+	StationedAt   *uuid.UUID
+	ChassisNumber *string // nil until the chassis number is known
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+// ContainerEpisodeView is the read projection of one container custody row.
+type ContainerEpisodeView struct {
+	ID              uuid.UUID
+	Status          intermodal.CustodyEpisodeStatus
+	SourcedFrom     uuid.UUID
+	StationedAt     *uuid.UUID
+	ContainerNumber string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }

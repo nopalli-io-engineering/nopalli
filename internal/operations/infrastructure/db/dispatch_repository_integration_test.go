@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
 	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
@@ -185,6 +186,77 @@ func TestIntegration_OptimisticConcurrency(t *testing.T) {
 	})
 	if !errors.Is(err, coredb.ErrConcurrencyConflict) {
 		t.Fatalf("stale save err = %v, want ErrConcurrencyConflict", err)
+	}
+}
+
+// TestIntegration_ChildTimestampsSurviveSave is the regression the move from
+// delete+insert to UPSERT-by-id exists for: a child row's created_at must
+// survive a Save (it is not re-created), while its updated_at advances. A
+// delete+insert strategy would reset created_at on every save.
+func TestIntegration_ChildTimestampsSurviveSave(t *testing.T) {
+	ctx := context.Background()
+	dsn := dsnOrSkip(t)
+	if err := coredb.Migrate(ctx, dsn); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	pool, err := coredb.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	uow := coredb.NewUnitOfWork(pool)
+
+	d := liveLoadDispatch(t) // a queued live-load already has agenda items
+	id := d.ID()
+	if err := uow.Do(ctx, func(tx coredb.DBTX) error {
+		return opsdb.NewDispatchRepository(tx, nil).Add(ctx, d)
+	}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	// Read one agenda row's timestamps straight after insert.
+	agendaTimes := func() (createdAt, updatedAt time.Time) {
+		t.Helper()
+		err := pool.QueryRow(ctx, `
+SELECT created_at, updated_at
+FROM operations.intermodal_dispatch_agenda_items
+WHERE dispatch_id = $1 ORDER BY item_no LIMIT 1`, id.UUID()).Scan(&createdAt, &updatedAt)
+		if err != nil {
+			t.Fatalf("read agenda timestamps: %v", err)
+		}
+		return createdAt, updatedAt
+	}
+	created1, updated1 := agendaTimes()
+
+	// Advance and save in a later transaction, so now() differs.
+	if err := uow.Do(ctx, func(tx coredb.DBTX) error {
+		repo := opsdb.NewDispatchRepository(tx, nil)
+		loaded, err := repo.Get(ctx, id)
+		if err != nil {
+			return err
+		}
+		loaded.Delegate(intermodal.NewDispatcherID())
+		driver, truck := intermodal.NewDriverID(), intermodal.NewTruckID()
+		if _, err := loaded.Assign(&driver, &truck); err != nil {
+			return err
+		}
+		if err := loaded.Approve(); err != nil {
+			return err
+		}
+		if err := loaded.Start(); err != nil {
+			return err
+		}
+		return repo.Save(ctx, loaded)
+	}); err != nil {
+		t.Fatalf("advance+save: %v", err)
+	}
+
+	created2, updated2 := agendaTimes()
+	if !created2.Equal(created1) {
+		t.Fatalf("created_at changed across save: %v -> %v (should be preserved)", created1, created2)
+	}
+	if !updated2.After(updated1) {
+		t.Fatalf("updated_at did not advance across save: %v -> %v", updated1, updated2)
 	}
 }
 

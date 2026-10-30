@@ -104,7 +104,9 @@ func (r *DispatchRepository) Add(ctx context.Context, d *intermodal.Dispatch) er
 	if err != nil {
 		return fmt.Errorf("operations: insert dispatch: %w", err)
 	}
-	if err := r.insertChildren(ctx, s); err != nil {
+	// A fresh aggregate has no stored children, so writeChildren only inserts
+	// here; it shares the upsert path with Save for a single source of SQL.
+	if err := r.writeChildren(ctx, s); err != nil {
 		return err
 	}
 	if err := r.events.Record(ctx, r.db, d.PullEvents()); err != nil {
@@ -121,11 +123,14 @@ SET source_quote_id = $1, plan_type = $2, status = $3, item_cursor = $4,
 WHERE id = $8 AND version = $9`
 
 // Save persists changes to an already-stored dispatch under optimistic
-// concurrency, then replaces its child rows. Must run inside a UnitOfWork
+// concurrency, then reconciles its child rows. Must run inside a UnitOfWork
 // transaction. Returns ErrConcurrencyConflict if the row moved on since load.
 //
-// Child rows are deleted and re-inserted from the snapshot each save — the
-// simplest correct reconciliation; optimize to a diff only if it ever matters.
+// Children are reconciled to the snapshot by id: each snapshot row is upserted
+// (insert, or update-in-place on conflict — preserving created_at, bumping
+// updated_at), and rows the aggregate no longer owns are deleted. The whole
+// aggregate is one transactional unit gated by the root's version, so there is
+// no window where the children disagree with the root.
 func (r *DispatchRepository) Save(ctx context.Context, d *intermodal.Dispatch) error {
 	s := d.Snapshot()
 	newVersion := s.Version + 1
@@ -140,10 +145,10 @@ func (r *DispatchRepository) Save(ctx context.Context, d *intermodal.Dispatch) e
 	if tag.RowsAffected() == 0 {
 		return coredb.ErrConcurrencyConflict
 	}
-	if err := r.deleteChildren(ctx, s.ID); err != nil {
+	if err := r.writeChildren(ctx, s); err != nil {
 		return err
 	}
-	if err := r.insertChildren(ctx, s); err != nil {
+	if err := r.deleteMissingChildren(ctx, s); err != nil {
 		return err
 	}
 	if err := r.events.Record(ctx, r.db, d.PullEvents()); err != nil {
@@ -155,7 +160,13 @@ func (r *DispatchRepository) Save(ctx context.Context, d *intermodal.Dispatch) e
 
 // --- child writes --------------------------------------------------------- //
 
-func (r *DispatchRepository) insertChildren(ctx context.Context, s intermodal.DispatchSnapshot) error {
+// writeChildren upserts every child row from the snapshot by id. On conflict it
+// updates the mutable columns in place: created_at is never listed, so it keeps
+// the value from the original insert, and updated_at is bumped to now() — the
+// same audit semantics the root row has. The custody episodes' close column is
+// not part of the snapshot, so it is written once on insert and left untouched
+// on update.
+func (r *DispatchRepository) writeChildren(ctx context.Context, s intermodal.DispatchSnapshot) error {
 	for _, i := range s.AgendaItems {
 		details, err := encodeDetails(i.Container)
 		if err != nil {
@@ -164,63 +175,123 @@ func (r *DispatchRepository) insertChildren(ctx context.Context, s intermodal.Di
 		_, err = r.db.Exec(ctx, `
 INSERT INTO operations.intermodal_dispatch_agenda_items
     (id, dispatch_id, item_no, action, facility_id, status, details, attributed_driver, attributed_truck)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (id) DO UPDATE SET
+    item_no = EXCLUDED.item_no, action = EXCLUDED.action, facility_id = EXCLUDED.facility_id,
+    status = EXCLUDED.status, details = EXCLUDED.details,
+    attributed_driver = EXCLUDED.attributed_driver, attributed_truck = EXCLUDED.attributed_truck,
+    updated_at = now()`,
 			pgID(i.ID), pgID(s.ID), int32(i.ItemNo), string(i.Action), pgIDOpt(i.FacilityID),
 			string(i.Status), details, pgIDOpt(i.AttributedDriver), pgIDOpt(i.AttributedTruck),
 		)
 		if err != nil {
-			return fmt.Errorf("operations: insert agenda item: %w", err)
+			return fmt.Errorf("operations: upsert agenda item: %w", err)
 		}
 	}
 	for _, a := range s.Assignments {
 		_, err := r.db.Exec(ctx, `
 INSERT INTO operations.intermodal_dispatch_assignments (id, dispatch_id, driver_id, truck_id, status)
-VALUES ($1, $2, $3, $4, $5)`,
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (id) DO UPDATE SET
+    driver_id = EXCLUDED.driver_id, truck_id = EXCLUDED.truck_id, status = EXCLUDED.status,
+    updated_at = now()`,
 			pgID(a.ID), pgID(s.ID), pgIDOpt(a.DriverID), pgIDOpt(a.TruckID), string(a.Status),
 		)
 		if err != nil {
-			return fmt.Errorf("operations: insert assignment: %w", err)
+			return fmt.Errorf("operations: upsert assignment: %w", err)
 		}
 	}
 	for _, e := range s.ChassisEpisodes {
 		_, err := r.db.Exec(ctx, `
 INSERT INTO operations.intermodal_dispatch_chassis_custody_episodes
     (id, dispatch_id, status, close, sourced_from, stationed_at, chassis_number)
-VALUES ($1, $2, $3, NULL, $4, $5, $6)`,
+VALUES ($1, $2, $3, NULL, $4, $5, $6)
+ON CONFLICT (id) DO UPDATE SET
+    status = EXCLUDED.status, sourced_from = EXCLUDED.sourced_from,
+    stationed_at = EXCLUDED.stationed_at, chassis_number = EXCLUDED.chassis_number,
+    updated_at = now()`,
 			pgID(e.ID), pgID(s.ID), string(e.Status), pgID(e.SourcedFrom), pgIDOpt(e.StationedAt),
 			chassisText(e.ChassisNumber),
 		)
 		if err != nil {
-			return fmt.Errorf("operations: insert chassis episode: %w", err)
+			return fmt.Errorf("operations: upsert chassis episode: %w", err)
 		}
 	}
 	for _, e := range s.ContainerEpisodes {
 		_, err := r.db.Exec(ctx, `
 INSERT INTO operations.intermodal_dispatch_container_custody_episodes
     (id, dispatch_id, status, close, sourced_from, stationed_at, container_number)
-VALUES ($1, $2, $3, NULL, $4, $5, $6)`,
+VALUES ($1, $2, $3, NULL, $4, $5, $6)
+ON CONFLICT (id) DO UPDATE SET
+    status = EXCLUDED.status, sourced_from = EXCLUDED.sourced_from,
+    stationed_at = EXCLUDED.stationed_at, container_number = EXCLUDED.container_number,
+    updated_at = now()`,
 			pgID(e.ID), pgID(s.ID), string(e.Status), pgID(e.SourcedFrom), pgIDOpt(e.StationedAt),
 			e.ContainerNumber.String(),
 		)
 		if err != nil {
-			return fmt.Errorf("operations: insert container episode: %w", err)
+			return fmt.Errorf("operations: upsert container episode: %w", err)
 		}
 	}
 	return nil
 }
 
-func (r *DispatchRepository) deleteChildren(ctx context.Context, id intermodal.DispatchID) error {
-	for _, table := range []string{
-		"operations.intermodal_dispatch_agenda_items",
-		"operations.intermodal_dispatch_assignments",
-		"operations.intermodal_dispatch_chassis_custody_episodes",
-		"operations.intermodal_dispatch_container_custody_episodes",
-	} {
-		if _, err := r.db.Exec(ctx, "DELETE FROM "+table+" WHERE dispatch_id = $1", pgID(id)); err != nil {
-			return fmt.Errorf("operations: delete children (%s): %w", table, err)
+// deleteMissingChildren removes rows the aggregate no longer owns: per child
+// table, everything under this dispatch whose id is not in the snapshot. An
+// empty id set deletes every row of that kind (id <> ALL('{}') is true), which
+// is the correct "the aggregate dropped them all" case.
+func (r *DispatchRepository) deleteMissingChildren(ctx context.Context, s intermodal.DispatchSnapshot) error {
+	tables := []struct {
+		name string
+		keep []string
+	}{
+		{"operations.intermodal_dispatch_agenda_items", agendaItemIDs(s)},
+		{"operations.intermodal_dispatch_assignments", assignmentIDs(s)},
+		{"operations.intermodal_dispatch_chassis_custody_episodes", chassisEpisodeIDs(s)},
+		{"operations.intermodal_dispatch_container_custody_episodes", containerEpisodeIDs(s)},
+	}
+	for _, t := range tables {
+		_, err := r.db.Exec(ctx,
+			"DELETE FROM "+t.name+" WHERE dispatch_id = $1 AND id <> ALL($2::uuid[])",
+			pgID(s.ID), t.keep,
+		)
+		if err != nil {
+			return fmt.Errorf("operations: prune children (%s): %w", t.name, err)
 		}
 	}
 	return nil
+}
+
+func agendaItemIDs(s intermodal.DispatchSnapshot) []string {
+	ids := make([]string, 0, len(s.AgendaItems))
+	for _, i := range s.AgendaItems {
+		ids = append(ids, i.ID.String())
+	}
+	return ids
+}
+
+func assignmentIDs(s intermodal.DispatchSnapshot) []string {
+	ids := make([]string, 0, len(s.Assignments))
+	for _, a := range s.Assignments {
+		ids = append(ids, a.ID.String())
+	}
+	return ids
+}
+
+func chassisEpisodeIDs(s intermodal.DispatchSnapshot) []string {
+	ids := make([]string, 0, len(s.ChassisEpisodes))
+	for _, e := range s.ChassisEpisodes {
+		ids = append(ids, e.ID.String())
+	}
+	return ids
+}
+
+func containerEpisodeIDs(s intermodal.DispatchSnapshot) []string {
+	ids := make([]string, 0, len(s.ContainerEpisodes))
+	for _, e := range s.ContainerEpisodes {
+		ids = append(ids, e.ID.String())
+	}
+	return ids
 }
 
 // --- child reads ---------------------------------------------------------- //

@@ -155,6 +155,16 @@ func TestIntegration_HTTPStack(t *testing.T) {
 	if gotDetail.ID != id || gotDetail.Status != intermodal.StatusInProgress {
 		t.Fatalf("GET detail = %+v, want id %s in_progress", gotDetail, id)
 	}
+	// Children are projected onto the detail, carrying audit timestamps.
+	if len(gotDetail.AgendaItems) == 0 {
+		t.Fatal("GET detail: expected agenda items")
+	}
+	if gotDetail.AgendaItems[0].CreatedAt.IsZero() || gotDetail.AgendaItems[0].UpdatedAt.IsZero() {
+		t.Fatalf("GET detail: agenda item missing timestamps: %+v", gotDetail.AgendaItems[0])
+	}
+	if len(gotDetail.Assignments) != 1 {
+		t.Fatalf("GET detail: assignments = %d, want 1", len(gotDetail.Assignments))
+	}
 
 	lr := get(base + "?status=" + string(intermodal.StatusInProgress))
 	if lr.StatusCode != http.StatusOK {

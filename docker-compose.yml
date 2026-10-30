@@ -30,6 +30,33 @@ services:
     networks:
       - nopalli
 
+  api:
+    # The HTTP server (cmd/api). Unlike `app` (a sleeping shell for test runs),
+    # this service actually runs the api and publishes it to the host. It does
+    # NOT migrate on boot, so apply migrations first — `make run` does both, or
+    # run `make migrate` before `docker compose up api`. Override the published
+    # host port with API_PORT if 8080 clashes with another stack, e.g.
+    # `API_PORT=8090 docker compose up api`.
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    working_dir: /src
+    command: ["go", "run", "./cmd/api"]
+    volumes:
+      - .:/src
+      - go-build-cache:/root/.cache/go-build
+      - go-mod-cache:/go/pkg/mod
+    environment:
+      DB_URL: postgres://nopalli:nopalli@postgres:5432/nopalli?sslmode=disable
+      PORT: "8080"
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nopalli
+
   postgres:
     image: postgres:16-alpine
     environment:
