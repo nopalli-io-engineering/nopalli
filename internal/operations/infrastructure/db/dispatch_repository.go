@@ -19,10 +19,6 @@ import (
 	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
 )
 
-// ErrConcurrencyConflict is returned by Save when the row's version no longer
-// matches the aggregate's — another writer committed first (optimistic lock).
-var ErrConcurrencyConflict = errors.New("operations: dispatch concurrency conflict")
-
 // DispatchRepository loads and stores the Dispatch aggregate. Bind it to a
 // DBTX: a *pgxpool.Pool for reads, or the tx from a UnitOfWork for writes
 // (Add/Save must run inside a transaction to be atomic across the root and its
@@ -142,7 +138,7 @@ func (r *DispatchRepository) Save(ctx context.Context, d *intermodal.Dispatch) e
 		return fmt.Errorf("operations: update dispatch: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return ErrConcurrencyConflict
+		return coredb.ErrConcurrencyConflict
 	}
 	if err := r.deleteChildren(ctx, s.ID); err != nil {
 		return err

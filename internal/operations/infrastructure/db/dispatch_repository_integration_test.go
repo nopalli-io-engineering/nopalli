@@ -183,7 +183,7 @@ func TestIntegration_OptimisticConcurrency(t *testing.T) {
 	err = uow.Do(ctx, func(tx coredb.DBTX) error {
 		return opsdb.NewDispatchRepository(tx, nil).Save(ctx, second)
 	})
-	if !errors.Is(err, opsdb.ErrConcurrencyConflict) {
+	if !errors.Is(err, coredb.ErrConcurrencyConflict) {
 		t.Fatalf("stale save err = %v, want ErrConcurrencyConflict", err)
 	}
 }

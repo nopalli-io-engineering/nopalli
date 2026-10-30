@@ -1,9 +1,10 @@
 # REST API shape (operations / intermodal dispatch)
 
 Design note for the HTTP layer over `application.IntermodalDispatchService`.
-Mirrors rdt's `interfaces/api/v1/operations`, translated to our Go stack. Not
-yet implemented; the read side (read models + query port + adapter) *is* built
-(see "Status").
+Mirrors rdt's `interfaces/api/v1/operations`, translated to our Go stack. The
+command and query endpoints are both built now (package
+`internal/operations/interfaces/rest`); see "Status" for what remains
+(publicid codec, auth).
 
 ## Conventions
 
@@ -99,9 +100,25 @@ driven by an `operations:intermodal_dispatch.read_all` grant. An out-of-scope
 
 ## Status
 
-- **Built**: read side — `application.DispatchSummary` / `DispatchDetail`
-  (read models), `application.DispatchQueries` + `Visibility` (port), and the
-  pgx adapter `db.DispatchQueryService`.
-- **Buildable now** over the existing service: all command (POST) endpoints.
-- **Blocked**: the HTTP layer itself (handlers/router/error mapping/auth) — this
-  note is its plan.
+- **Built — command endpoints**: `internal/operations/interfaces/rest`
+  (package `rest`, named to avoid shadowing `net/http`) — the 15 POST
+  transitions over a consumer-defined `CommandService` interface, raw-UUID
+  boundary parsing, `CreateDispatchRequest`/`AssignRequest`/etc. DTOs, and the
+  `statusFor` error→status map. Shared mechanism in
+  `internal/core/interface/httpx` (`WriteProblem`/`WriteJSON`/`DecodeJSON`,
+  lean `{code,message}` body). Composition root at `cmd/api` (env: `DB_URL`,
+  `PORT`; auth = `AllowAll`). Covered by `httptest` handler tests + a full-stack
+  HTTP↔Postgres integration test.
+- **Built — read side**: `application.DispatchSummary`/`DispatchDetail`,
+  `application.DispatchQueries` + `Visibility`, pgx adapter `db.DispatchQueryService`.
+- **Built — query endpoints**: `GET /dispatches` (status/limit/offset query
+  params; empty list serialized as `[]`) and `GET /dispatches/{id}` in
+  `rest/reads.go`, over the `application.DispatchQueries` port. Reads scope via
+  a `Handlers.visibility()` seam (returns `VisibleAll` until auth lands); an
+  out-of-scope or unknown id is a 404, never leaking that the id is real.
+  Response DTOs (`DispatchSummaryResponse`/`DispatchDetailResponse`) are
+  raw-UUID strings with nullable ids omitted. Covered by `httptest` tests + the
+  full-stack HTTP↔Postgres integration test.
+- **Not yet wired**: the `publicid` codec decision (currently raw UUIDs) and
+  auth (OIDC/session) — the `visibility()` seam is where read scoping will
+  derive from the principal's `read_all` grant.
