@@ -16,7 +16,7 @@ import (
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
 	"github.com/nopalli-io/nopalli/internal/core/infrastructure/outbox"
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // DispatchRepository loads and stores the Dispatch aggregate. Bind it to a
@@ -44,7 +44,7 @@ WHERE id = $1`
 
 // Get loads a fully-populated Dispatch by id (rdt: repository.get + selectin
 // eager load). It returns operations' DispatchNotFound when absent.
-func (r *DispatchRepository) Get(ctx context.Context, id intermodal.DispatchID) (*intermodal.Dispatch, error) {
+func (r *DispatchRepository) Get(ctx context.Context, id intermodal_old.DispatchID) (*intermodal_old.Dispatch, error) {
 	var (
 		sourceQuote, dispatcher, currentAssignment pgtype.UUID
 		planType, status                           string
@@ -54,19 +54,19 @@ func (r *DispatchRepository) Get(ctx context.Context, id intermodal.DispatchID) 
 	err := r.db.QueryRow(ctx, selectRoot, pgID(id)).
 		Scan(&sourceQuote, &dispatcher, &currentAssignment, &planType, &status, &taskCursor, &version)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, intermodal.NewDispatchNotFound(id)
+		return nil, intermodal_old.NewDispatchNotFound(id)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("operations: load dispatch: %w", err)
 	}
 
-	snap := intermodal.DispatchSnapshot{
+	snap := intermodal_old.DispatchSnapshot{
 		ID:                  id,
 		SourceQuoteID:       optSourceQuote(sourceQuote),
 		DispatcherID:        optDispatcher(dispatcher),
 		CurrentAssignmentID: optAssignment(currentAssignment),
-		PlanType:            intermodal.PlanType(planType),
-		Status:              intermodal.Status(status),
+		PlanType:            intermodal_old.PlanType(planType),
+		Status:              intermodal_old.Status(status),
 		Cursor:              cursorFromDB(taskCursor),
 		Version:             int(version),
 	}
@@ -85,7 +85,7 @@ func (r *DispatchRepository) Get(ctx context.Context, id intermodal.DispatchID) 
 		return nil, loadErr
 	}
 
-	return intermodal.Reconstitute(snap), nil
+	return intermodal_old.Reconstitute(snap), nil
 }
 
 const insertRoot = `
@@ -95,7 +95,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 // Add inserts a newly-queued dispatch and its children (rdt: repository.add).
 // Must run inside a UnitOfWork transaction.
-func (r *DispatchRepository) Add(ctx context.Context, d *intermodal.Dispatch) error {
+func (r *DispatchRepository) Add(ctx context.Context, d *intermodal_old.Dispatch) error {
 	s := d.Snapshot()
 	_, err := r.db.Exec(ctx, insertRoot,
 		pgID(s.ID), pgIDOpt(s.SourceQuoteID), string(s.PlanType), string(s.Status),
@@ -131,7 +131,7 @@ WHERE id = $8 AND version = $9`
 // updated_at), and rows the aggregate no longer owns are deleted. The whole
 // aggregate is one transactional unit gated by the root's version, so there is
 // no window where the children disagree with the root.
-func (r *DispatchRepository) Save(ctx context.Context, d *intermodal.Dispatch) error {
+func (r *DispatchRepository) Save(ctx context.Context, d *intermodal_old.Dispatch) error {
 	s := d.Snapshot()
 	newVersion := s.Version + 1
 	tag, err := r.db.Exec(ctx, updateRoot,
@@ -166,7 +166,7 @@ func (r *DispatchRepository) Save(ctx context.Context, d *intermodal.Dispatch) e
 // same audit semantics the root row has. The custody episodes' close column is
 // not part of the snapshot, so it is written once on insert and left untouched
 // on update.
-func (r *DispatchRepository) writeChildren(ctx context.Context, s intermodal.DispatchSnapshot) error {
+func (r *DispatchRepository) writeChildren(ctx context.Context, s intermodal_old.DispatchSnapshot) error {
 	for _, t := range s.Tasks {
 		details, err := encodeDetails(t.Container)
 		if err != nil {
@@ -240,7 +240,7 @@ ON CONFLICT (id) DO UPDATE SET
 // table, everything under this dispatch whose id is not in the snapshot. An
 // empty id set deletes every row of that kind (id <> ALL('{}') is true), which
 // is the correct "the aggregate dropped them all" case.
-func (r *DispatchRepository) deleteMissingChildren(ctx context.Context, s intermodal.DispatchSnapshot) error {
+func (r *DispatchRepository) deleteMissingChildren(ctx context.Context, s intermodal_old.DispatchSnapshot) error {
 	tables := []struct {
 		name string
 		keep []string
@@ -262,7 +262,7 @@ func (r *DispatchRepository) deleteMissingChildren(ctx context.Context, s interm
 	return nil
 }
 
-func taskIDs(s intermodal.DispatchSnapshot) []string {
+func taskIDs(s intermodal_old.DispatchSnapshot) []string {
 	ids := make([]string, 0, len(s.Tasks))
 	for _, t := range s.Tasks {
 		ids = append(ids, t.ID.String())
@@ -270,7 +270,7 @@ func taskIDs(s intermodal.DispatchSnapshot) []string {
 	return ids
 }
 
-func assignmentIDs(s intermodal.DispatchSnapshot) []string {
+func assignmentIDs(s intermodal_old.DispatchSnapshot) []string {
 	ids := make([]string, 0, len(s.Assignments))
 	for _, a := range s.Assignments {
 		ids = append(ids, a.ID.String())
@@ -278,7 +278,7 @@ func assignmentIDs(s intermodal.DispatchSnapshot) []string {
 	return ids
 }
 
-func chassisEpisodeIDs(s intermodal.DispatchSnapshot) []string {
+func chassisEpisodeIDs(s intermodal_old.DispatchSnapshot) []string {
 	ids := make([]string, 0, len(s.ChassisEpisodes))
 	for _, e := range s.ChassisEpisodes {
 		ids = append(ids, e.ID.String())
@@ -286,7 +286,7 @@ func chassisEpisodeIDs(s intermodal.DispatchSnapshot) []string {
 	return ids
 }
 
-func containerEpisodeIDs(s intermodal.DispatchSnapshot) []string {
+func containerEpisodeIDs(s intermodal_old.DispatchSnapshot) []string {
 	ids := make([]string, 0, len(s.ContainerEpisodes))
 	for _, e := range s.ContainerEpisodes {
 		ids = append(ids, e.ID.String())
@@ -296,7 +296,7 @@ func containerEpisodeIDs(s intermodal.DispatchSnapshot) []string {
 
 // --- child reads ---------------------------------------------------------- //
 
-func (r *DispatchRepository) loadTasks(ctx context.Context, id intermodal.DispatchID) ([]intermodal.TaskSnapshot, error) {
+func (r *DispatchRepository) loadTasks(ctx context.Context, id intermodal_old.DispatchID) ([]intermodal_old.TaskSnapshot, error) {
 	rows, err := r.db.Query(ctx, `
 SELECT id, task_no, action, facility_id, status, details, attributed_driver, attributed_truck
 FROM operations.intermodal_dispatch_tasks
@@ -307,7 +307,7 @@ ORDER BY task_no`, pgID(id))
 	}
 	defer rows.Close()
 
-	var out []intermodal.TaskSnapshot
+	var out []intermodal_old.TaskSnapshot
 	for rows.Next() {
 		var (
 			taskID, facility, driver, truck pgtype.UUID
@@ -322,12 +322,12 @@ ORDER BY task_no`, pgID(id))
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, intermodal.TaskSnapshot{
+		out = append(out, intermodal_old.TaskSnapshot{
 			ID:               mustTaskID(taskID),
 			No:               int(taskNo),
-			Action:           intermodal.Action(action),
+			Action:           intermodal_old.Action(action),
 			FacilityID:       optFacility(facility),
-			Status:           intermodal.TaskStatus(status),
+			Status:           intermodal_old.TaskStatus(status),
 			Container:        container,
 			AttributedDriver: optDriver(driver),
 			AttributedTruck:  optTruck(truck),
@@ -336,7 +336,7 @@ ORDER BY task_no`, pgID(id))
 	return out, rows.Err()
 }
 
-func (r *DispatchRepository) loadAssignments(ctx context.Context, id intermodal.DispatchID) ([]intermodal.AssignmentSnapshot, error) {
+func (r *DispatchRepository) loadAssignments(ctx context.Context, id intermodal_old.DispatchID) ([]intermodal_old.AssignmentSnapshot, error) {
 	rows, err := r.db.Query(ctx, `
 SELECT id, driver_id, truck_id, status
 FROM operations.intermodal_dispatch_assignments
@@ -346,7 +346,7 @@ WHERE dispatch_id = $1`, pgID(id))
 	}
 	defer rows.Close()
 
-	var out []intermodal.AssignmentSnapshot
+	var out []intermodal_old.AssignmentSnapshot
 	for rows.Next() {
 		var (
 			assignmentID, driver, truck pgtype.UUID
@@ -355,17 +355,17 @@ WHERE dispatch_id = $1`, pgID(id))
 		if err := rows.Scan(&assignmentID, &driver, &truck, &status); err != nil {
 			return nil, fmt.Errorf("operations: scan assignment: %w", err)
 		}
-		out = append(out, intermodal.AssignmentSnapshot{
+		out = append(out, intermodal_old.AssignmentSnapshot{
 			ID:       mustAssignmentID(assignmentID),
 			DriverID: optDriver(driver),
 			TruckID:  optTruck(truck),
-			Status:   intermodal.AssignmentStatus(status),
+			Status:   intermodal_old.AssignmentStatus(status),
 		})
 	}
 	return out, rows.Err()
 }
 
-func (r *DispatchRepository) loadChassisEpisodes(ctx context.Context, id intermodal.DispatchID) ([]intermodal.ChassisEpisodeSnapshot, error) {
+func (r *DispatchRepository) loadChassisEpisodes(ctx context.Context, id intermodal_old.DispatchID) ([]intermodal_old.ChassisEpisodeSnapshot, error) {
 	rows, err := r.db.Query(ctx, `
 SELECT id, status, sourced_from, stationed_at, chassis_number
 FROM operations.intermodal_dispatch_chassis_custody_episodes
@@ -375,7 +375,7 @@ WHERE dispatch_id = $1`, pgID(id))
 	}
 	defer rows.Close()
 
-	var out []intermodal.ChassisEpisodeSnapshot
+	var out []intermodal_old.ChassisEpisodeSnapshot
 	for rows.Next() {
 		var (
 			episodeID, sourcedFrom, stationedAt pgtype.UUID
@@ -389,9 +389,9 @@ WHERE dispatch_id = $1`, pgID(id))
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, intermodal.ChassisEpisodeSnapshot{
+		out = append(out, intermodal_old.ChassisEpisodeSnapshot{
 			ID:            mustChassisEpisodeID(episodeID),
-			Status:        intermodal.CustodyEpisodeStatus(status),
+			Status:        intermodal_old.CustodyEpisodeStatus(status),
 			SourcedFrom:   mustFacilityID(sourcedFrom),
 			StationedAt:   optFacility(stationedAt),
 			ChassisNumber: chassis,
@@ -400,7 +400,7 @@ WHERE dispatch_id = $1`, pgID(id))
 	return out, rows.Err()
 }
 
-func (r *DispatchRepository) loadContainerEpisodes(ctx context.Context, id intermodal.DispatchID) ([]intermodal.ContainerEpisodeSnapshot, error) {
+func (r *DispatchRepository) loadContainerEpisodes(ctx context.Context, id intermodal_old.DispatchID) ([]intermodal_old.ContainerEpisodeSnapshot, error) {
 	rows, err := r.db.Query(ctx, `
 SELECT id, status, sourced_from, stationed_at, container_number
 FROM operations.intermodal_dispatch_container_custody_episodes
@@ -410,7 +410,7 @@ WHERE dispatch_id = $1`, pgID(id))
 	}
 	defer rows.Close()
 
-	var out []intermodal.ContainerEpisodeSnapshot
+	var out []intermodal_old.ContainerEpisodeSnapshot
 	for rows.Next() {
 		var (
 			episodeID, sourcedFrom, stationedAt pgtype.UUID
@@ -419,13 +419,13 @@ WHERE dispatch_id = $1`, pgID(id))
 		if err := rows.Scan(&episodeID, &status, &sourcedFrom, &stationedAt, &containerNumber); err != nil {
 			return nil, fmt.Errorf("operations: scan container episode: %w", err)
 		}
-		container, err := intermodal.NewContainerNumber(containerNumber)
+		container, err := intermodal_old.NewContainerNumber(containerNumber)
 		if err != nil {
 			return nil, fmt.Errorf("operations: decode container number: %w", err)
 		}
-		out = append(out, intermodal.ContainerEpisodeSnapshot{
+		out = append(out, intermodal_old.ContainerEpisodeSnapshot{
 			ID:              mustContainerEpisodeID(episodeID),
-			Status:          intermodal.CustodyEpisodeStatus(status),
+			Status:          intermodal_old.CustodyEpisodeStatus(status),
 			SourcedFrom:     mustFacilityID(sourcedFrom),
 			StationedAt:     optFacility(stationedAt),
 			ContainerNumber: container,

@@ -1,4 +1,4 @@
-package intermodal
+package intermodal_old
 
 import (
 	"errors"
@@ -119,7 +119,7 @@ type TaskSpec struct {
 //
 // Go has no enum type. String values are identical to rdt's so persisted rows
 // and event payloads stay wire-compatible. Naming follows "trim the stutter":
-// because the package qualifies every name (intermodal.Status), rdt's
+// because the package qualifies every name (intermodal_old.Status), rdt's
 // DispatchStatus / DispatchAction become Status / Action here; the other status
 // enums keep their qualifier to avoid three colliding Status types.
 

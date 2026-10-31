@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // Read-side DTOs for the operations context (rdt: application/read_models.py).
@@ -18,8 +18,8 @@ import (
 type DispatchSummary struct {
 	ID            uuid.UUID
 	SourceQuoteID *uuid.UUID // nil when the dispatch has no source quote
-	PlanType      intermodal.PlanType
-	Status        intermodal.Status
+	PlanType      intermodal_old.PlanType
+	Status        intermodal_old.Status
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -31,8 +31,8 @@ type DispatchDetail struct {
 	ID                uuid.UUID
 	SourceQuoteID     *uuid.UUID // nil when the dispatch has no source quote
 	DispatcherID      *uuid.UUID // nil until delegated
-	PlanType          intermodal.PlanType
-	Status            intermodal.Status
+	PlanType          intermodal_old.PlanType
+	Status            intermodal_old.Status
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	Tasks             []TaskView
@@ -46,9 +46,9 @@ type DispatchDetail struct {
 type TaskView struct {
 	ID               uuid.UUID
 	No               int
-	Action           intermodal.Action
+	Action           intermodal_old.Action
 	FacilityID       *uuid.UUID
-	Status           intermodal.TaskStatus
+	Status           intermodal_old.TaskStatus
 	AttributedDriver *uuid.UUID
 	AttributedTruck  *uuid.UUID
 	CreatedAt        time.Time
@@ -60,7 +60,7 @@ type AssignmentView struct {
 	ID        uuid.UUID
 	DriverID  *uuid.UUID
 	TruckID   *uuid.UUID
-	Status    intermodal.AssignmentStatus
+	Status    intermodal_old.AssignmentStatus
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -68,7 +68,7 @@ type AssignmentView struct {
 // ChassisEpisodeView is the read projection of one chassis custody row.
 type ChassisEpisodeView struct {
 	ID            uuid.UUID
-	Status        intermodal.CustodyEpisodeStatus
+	Status        intermodal_old.CustodyEpisodeStatus
 	SourcedFrom   uuid.UUID
 	StationedAt   *uuid.UUID
 	ChassisNumber *string // nil until the chassis number is known
@@ -79,7 +79,7 @@ type ChassisEpisodeView struct {
 // ContainerEpisodeView is the read projection of one container custody row.
 type ContainerEpisodeView struct {
 	ID              uuid.UUID
-	Status          intermodal.CustodyEpisodeStatus
+	Status          intermodal_old.CustodyEpisodeStatus
 	SourcedFrom     uuid.UUID
 	StationedAt     *uuid.UUID
 	ContainerNumber string

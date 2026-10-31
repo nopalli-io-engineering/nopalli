@@ -11,7 +11,7 @@ import (
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
-	intermodal "github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 	opsdb "github.com/nopalli-io/nopalli/internal/operations/infrastructure/db"
 	"github.com/nopalli-io/nopalli/internal/operations/interfaces/rest"
 )
@@ -80,9 +80,9 @@ func TestIntegration_HTTPStack(t *testing.T) {
 	createBody := `{
 		"plan_type": "live_load",
 		"container_number": "MSCU1234567",
-		"container_pickup_ramp": "` + intermodal.NewFacilityID().String() + `",
-		"container_dropoff_ramp": "` + intermodal.NewFacilityID().String() + `",
-		"dock_door": "` + intermodal.NewFacilityID().String() + `"
+		"container_pickup_ramp": "` + intermodal_old.NewFacilityID().String() + `",
+		"container_dropoff_ramp": "` + intermodal_old.NewFacilityID().String() + `",
+		"dock_door": "` + intermodal_old.NewFacilityID().String() + `"
 	}`
 	resp := post(base, createBody)
 	if resp.StatusCode != http.StatusCreated {
@@ -107,8 +107,8 @@ func TestIntegration_HTTPStack(t *testing.T) {
 		path, body string
 		want       int
 	}{
-		{"/delegation", `{"dispatcher_id":"` + intermodal.NewDispatcherID().String() + `"}`, 204},
-		{"/assignment", `{"driver_id":"` + intermodal.NewDriverID().String() + `","truck_id":"` + intermodal.NewTruckID().String() + `"}`, 201},
+		{"/delegation", `{"dispatcher_id":"` + intermodal_old.NewDispatcherID().String() + `"}`, 204},
+		{"/assignment", `{"driver_id":"` + intermodal_old.NewDriverID().String() + `","truck_id":"` + intermodal_old.NewTruckID().String() + `"}`, 201},
 		{"/approval", "", 204},
 		{"/start", "", 204},
 	}
@@ -121,7 +121,7 @@ func TestIntegration_HTTPStack(t *testing.T) {
 	}
 
 	// Confirm the persisted state through the read side.
-	did, err := intermodal.ParseDispatchID(id)
+	did, err := intermodal_old.ParseDispatchID(id)
 	if err != nil {
 		t.Fatalf("parse returned id: %v", err)
 	}
@@ -129,7 +129,7 @@ func TestIntegration_HTTPStack(t *testing.T) {
 	if err != nil || detail == nil {
 		t.Fatalf("read back: detail=%v err=%v", detail, err)
 	}
-	if detail.Status != intermodal.StatusInProgress {
+	if detail.Status != intermodal_old.StatusInProgress {
 		t.Fatalf("persisted status = %v, want in_progress", detail.Status)
 	}
 
@@ -152,7 +152,7 @@ func TestIntegration_HTTPStack(t *testing.T) {
 		t.Fatalf("decode detail: %v", err)
 	}
 	gr.Body.Close()
-	if gotDetail.ID != id || gotDetail.Status != intermodal.StatusInProgress {
+	if gotDetail.ID != id || gotDetail.Status != intermodal_old.StatusInProgress {
 		t.Fatalf("GET detail = %+v, want id %s in_progress", gotDetail, id)
 	}
 	// Children are projected onto the detail, carrying audit timestamps.
@@ -166,7 +166,7 @@ func TestIntegration_HTTPStack(t *testing.T) {
 		t.Fatalf("GET detail: assignments = %d, want 1", len(gotDetail.Assignments))
 	}
 
-	lr := get(base + "?status=" + string(intermodal.StatusInProgress))
+	lr := get(base + "?status=" + string(intermodal_old.StatusInProgress))
 	if lr.StatusCode != http.StatusOK {
 		t.Fatalf("GET list status = %d, want 200", lr.StatusCode)
 	}
@@ -186,7 +186,7 @@ func TestIntegration_HTTPStack(t *testing.T) {
 	}
 
 	// 404 for a well-formed but unknown id.
-	nr := get(base + "/" + intermodal.NewDispatchID().String())
+	nr := get(base + "/" + intermodal_old.NewDispatchID().String())
 	if nr.StatusCode != http.StatusNotFound {
 		t.Fatalf("GET unknown status = %d, want 404", nr.StatusCode)
 	}

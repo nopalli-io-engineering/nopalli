@@ -13,7 +13,7 @@ import (
 
 	"github.com/nopalli-io/nopalli/internal/core/domain"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 	"github.com/nopalli-io/nopalli/internal/operations/interfaces/rest"
 )
 
@@ -21,68 +21,68 @@ import (
 // captures the dispatch id of the last no-body command, so tests can assert
 // routing, decoding, status codes, and error mapping without a DB.
 type fakeService struct {
-	createID intermodal.DispatchID
-	assignID intermodal.AssignmentID
+	createID intermodal_old.DispatchID
+	assignID intermodal_old.AssignmentID
 	err      error
-	lastID   intermodal.DispatchID
+	lastID   intermodal_old.DispatchID
 }
 
-func (f *fakeService) CreateDispatch(context.Context, intermodal.MovePlan, *intermodal.SourceQuoteID) (intermodal.DispatchID, error) {
+func (f *fakeService) CreateDispatch(context.Context, intermodal_old.MovePlan, *intermodal_old.SourceQuoteID) (intermodal_old.DispatchID, error) {
 	return f.createID, f.err
 }
-func (f *fakeService) Delegate(_ context.Context, id intermodal.DispatchID, _ intermodal.DispatcherID) error {
+func (f *fakeService) Delegate(_ context.Context, id intermodal_old.DispatchID, _ intermodal_old.DispatcherID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) Assign(_ context.Context, id intermodal.DispatchID, _ *intermodal.DriverID, _ *intermodal.TruckID) (intermodal.AssignmentID, error) {
+func (f *fakeService) Assign(_ context.Context, id intermodal_old.DispatchID, _ *intermodal_old.DriverID, _ *intermodal_old.TruckID) (intermodal_old.AssignmentID, error) {
 	f.lastID = id
 	return f.assignID, f.err
 }
-func (f *fakeService) Approve(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) Approve(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) Start(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) Start(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) Verify(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) Verify(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) AcquireChassis(_ context.Context, id intermodal.DispatchID, _ intermodal.FacilityID, _ intermodal.ChassisNumber) error {
+func (f *fakeService) AcquireChassis(_ context.Context, id intermodal_old.DispatchID, _ intermodal_old.FacilityID, _ intermodal_old.ChassisNumber) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) PickUpContainer(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) PickUpContainer(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) PickUpPremountedContainer(_ context.Context, id intermodal.DispatchID, _ intermodal.ChassisNumber) error {
+func (f *fakeService) PickUpPremountedContainer(_ context.Context, id intermodal_old.DispatchID, _ intermodal_old.ChassisNumber) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) DeliverContainer(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) DeliverContainer(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) Hold(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) Hold(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) TakeContainer(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) TakeContainer(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) DropContainer(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) DropContainer(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) DropPremountedContainer(_ context.Context, id intermodal.DispatchID) error {
+func (f *fakeService) DropPremountedContainer(_ context.Context, id intermodal_old.DispatchID) error {
 	f.lastID = id
 	return f.err
 }
-func (f *fakeService) ReturnChassis(_ context.Context, id intermodal.DispatchID, _ intermodal.FacilityID) error {
+func (f *fakeService) ReturnChassis(_ context.Context, id intermodal_old.DispatchID, _ intermodal_old.FacilityID) error {
 	f.lastID = id
 	return f.err
 }
@@ -147,14 +147,14 @@ func decodeProblem(t *testing.T, w *httptest.ResponseRecorder) (code, message st
 const dispatchesPath = "/v1/operations/dispatches"
 
 func TestCreateDispatch_Created(t *testing.T) {
-	f := &fakeService{createID: intermodal.NewDispatchID()}
+	f := &fakeService{createID: intermodal_old.NewDispatchID()}
 	mux := serve(f)
 	body := `{
 		"plan_type": "live_load",
 		"container_number": "MSCU1234567",
-		"container_pickup_ramp": "` + intermodal.NewFacilityID().String() + `",
-		"container_dropoff_ramp": "` + intermodal.NewFacilityID().String() + `",
-		"dock_door": "` + intermodal.NewFacilityID().String() + `"
+		"container_pickup_ramp": "` + intermodal_old.NewFacilityID().String() + `",
+		"container_dropoff_ramp": "` + intermodal_old.NewFacilityID().String() + `",
+		"dock_door": "` + intermodal_old.NewFacilityID().String() + `"
 	}`
 	w := do(t, mux, http.MethodPost, dispatchesPath, body)
 
@@ -175,13 +175,13 @@ func TestCreateDispatch_Created(t *testing.T) {
 }
 
 func TestCreateDispatch_UnsupportedPlan(t *testing.T) {
-	mux := serve(&fakeService{createID: intermodal.NewDispatchID()})
+	mux := serve(&fakeService{createID: intermodal_old.NewDispatchID()})
 	body := `{
 		"plan_type": "ad_hoc",
 		"container_number": "MSCU1234567",
-		"container_pickup_ramp": "` + intermodal.NewFacilityID().String() + `",
-		"container_dropoff_ramp": "` + intermodal.NewFacilityID().String() + `",
-		"dock_door": "` + intermodal.NewFacilityID().String() + `"
+		"container_pickup_ramp": "` + intermodal_old.NewFacilityID().String() + `",
+		"container_dropoff_ramp": "` + intermodal_old.NewFacilityID().String() + `",
+		"dock_door": "` + intermodal_old.NewFacilityID().String() + `"
 	}`
 	w := do(t, mux, http.MethodPost, dispatchesPath, body)
 	if w.Code != http.StatusUnprocessableEntity {
@@ -198,8 +198,8 @@ func TestCreateDispatch_BadUUID(t *testing.T) {
 		"plan_type": "live_load",
 		"container_number": "MSCU1234567",
 		"container_pickup_ramp": "not-a-uuid",
-		"container_dropoff_ramp": "` + intermodal.NewFacilityID().String() + `",
-		"dock_door": "` + intermodal.NewFacilityID().String() + `"
+		"container_dropoff_ramp": "` + intermodal_old.NewFacilityID().String() + `",
+		"dock_door": "` + intermodal_old.NewFacilityID().String() + `"
 	}`
 	w := do(t, mux, http.MethodPost, dispatchesPath, body)
 	if w.Code != http.StatusBadRequest {
@@ -210,7 +210,7 @@ func TestCreateDispatch_BadUUID(t *testing.T) {
 func TestApprove_NoContentAndRoutesID(t *testing.T) {
 	f := &fakeService{}
 	mux := serve(f)
-	id := intermodal.NewDispatchID()
+	id := intermodal_old.NewDispatchID()
 	w := do(t, mux, http.MethodPost, dispatchesPath+"/"+id.String()+"/approval", "")
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204", w.Code)
@@ -221,9 +221,9 @@ func TestApprove_NoContentAndRoutesID(t *testing.T) {
 }
 
 func TestApprove_DomainConflict(t *testing.T) {
-	f := &fakeService{err: intermodal.ErrDispatchNotReady}
+	f := &fakeService{err: intermodal_old.ErrDispatchNotReady}
 	mux := serve(f)
-	id := intermodal.NewDispatchID()
+	id := intermodal_old.NewDispatchID()
 	w := do(t, mux, http.MethodPost, dispatchesPath+"/"+id.String()+"/approval", "")
 	if w.Code != http.StatusConflict {
 		t.Fatalf("status = %d, want 409", w.Code)
@@ -234,8 +234,8 @@ func TestApprove_DomainConflict(t *testing.T) {
 }
 
 func TestApprove_NotFound(t *testing.T) {
-	id := intermodal.NewDispatchID()
-	f := &fakeService{err: intermodal.NewDispatchNotFound(id)}
+	id := intermodal_old.NewDispatchID()
+	f := &fakeService{err: intermodal_old.NewDispatchNotFound(id)}
 	mux := serve(f)
 	w := do(t, mux, http.MethodPost, dispatchesPath+"/"+id.String()+"/approval", "")
 	if w.Code != http.StatusNotFound {
@@ -246,7 +246,7 @@ func TestApprove_NotFound(t *testing.T) {
 func TestApprove_PermissionDenied(t *testing.T) {
 	f := &fakeService{err: domain.PermissionDenied("operations:intermodal_dispatch.approve")}
 	mux := serve(f)
-	id := intermodal.NewDispatchID()
+	id := intermodal_old.NewDispatchID()
 	w := do(t, mux, http.MethodPost, dispatchesPath+"/"+id.String()+"/approval", "")
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403", w.Code)
@@ -262,10 +262,10 @@ func TestApprove_BadPathID(t *testing.T) {
 }
 
 func TestAssign_Created(t *testing.T) {
-	f := &fakeService{assignID: intermodal.NewAssignmentID()}
+	f := &fakeService{assignID: intermodal_old.NewAssignmentID()}
 	mux := serve(f)
-	id := intermodal.NewDispatchID()
-	body := `{"driver_id": "` + intermodal.NewDriverID().String() + `", "truck_id": "` + intermodal.NewTruckID().String() + `"}`
+	id := intermodal_old.NewDispatchID()
+	body := `{"driver_id": "` + intermodal_old.NewDriverID().String() + `", "truck_id": "` + intermodal_old.NewTruckID().String() + `"}`
 	w := do(t, mux, http.MethodPost, dispatchesPath+"/"+id.String()+"/assignment", body)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201 (body=%s)", w.Code, w.Body.String())
@@ -281,8 +281,8 @@ func TestAssign_Created(t *testing.T) {
 
 func TestAcquireChassis_BadChassisNumber(t *testing.T) {
 	mux := serve(&fakeService{})
-	id := intermodal.NewDispatchID()
-	body := `{"facility_id": "` + intermodal.NewFacilityID().String() + `", "chassis_number": "  "}`
+	id := intermodal_old.NewDispatchID()
+	body := `{"facility_id": "` + intermodal_old.NewFacilityID().String() + `", "chassis_number": "  "}`
 	w := do(t, mux, http.MethodPost, dispatchesPath+"/"+id.String()+"/chassis-acquisition", body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", w.Code)
@@ -290,11 +290,11 @@ func TestAcquireChassis_BadChassisNumber(t *testing.T) {
 }
 
 func TestListDispatches_OK(t *testing.T) {
-	id := intermodal.NewDispatchID()
+	id := intermodal_old.NewDispatchID()
 	q := &fakeQueries{summaries: []application.DispatchSummary{{
 		ID:       id.UUID(),
-		PlanType: intermodal.PlanLiveLoad,
-		Status:   intermodal.StatusInProgress,
+		PlanType: intermodal_old.PlanLiveLoad,
+		Status:   intermodal_old.StatusInProgress,
 	}}}
 	mux := serveFull(&fakeService{}, q)
 	w := do(t, mux, http.MethodGet, dispatchesPath, "")
@@ -327,12 +327,12 @@ func TestListDispatches_EmptyIsArray(t *testing.T) {
 func TestListDispatches_FilterParsed(t *testing.T) {
 	q := &fakeQueries{}
 	mux := serveFull(&fakeService{}, q)
-	w := do(t, mux, http.MethodGet, dispatchesPath+"?status="+string(intermodal.StatusInProgress)+"&limit=10&offset=5", "")
+	w := do(t, mux, http.MethodGet, dispatchesPath+"?status="+string(intermodal_old.StatusInProgress)+"&limit=10&offset=5", "")
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", w.Code)
 	}
-	if q.lastFilter.Status == nil || *q.lastFilter.Status != intermodal.StatusInProgress {
-		t.Fatalf("filter status = %v, want %v", q.lastFilter.Status, intermodal.StatusInProgress)
+	if q.lastFilter.Status == nil || *q.lastFilter.Status != intermodal_old.StatusInProgress {
+		t.Fatalf("filter status = %v, want %v", q.lastFilter.Status, intermodal_old.StatusInProgress)
 	}
 	if q.lastFilter.Limit != 10 || q.lastFilter.Offset != 5 {
 		t.Fatalf("filter limit/offset = %d/%d, want 10/5", q.lastFilter.Limit, q.lastFilter.Offset)
@@ -356,13 +356,13 @@ func TestListDispatches_BadLimit(t *testing.T) {
 }
 
 func TestGetDispatch_OK(t *testing.T) {
-	id := intermodal.NewDispatchID()
-	dispatcher := intermodal.NewDispatcherID().UUID()
+	id := intermodal_old.NewDispatchID()
+	dispatcher := intermodal_old.NewDispatcherID().UUID()
 	q := &fakeQueries{detail: &application.DispatchDetail{
 		ID:           id.UUID(),
 		DispatcherID: &dispatcher,
-		PlanType:     intermodal.PlanLiveLoad,
-		Status:       intermodal.StatusInProgress,
+		PlanType:     intermodal_old.PlanLiveLoad,
+		Status:       intermodal_old.StatusInProgress,
 	}}
 	mux := serveFull(&fakeService{}, q)
 	w := do(t, mux, http.MethodGet, dispatchesPath+"/"+id.String(), "")
@@ -386,20 +386,20 @@ func TestGetDispatch_OK(t *testing.T) {
 }
 
 func TestGetDispatch_IncludesChildren(t *testing.T) {
-	id := intermodal.NewDispatchID()
-	taskID := intermodal.NewTaskID().UUID()
-	assignID := intermodal.NewAssignmentID().UUID()
+	id := intermodal_old.NewDispatchID()
+	taskID := intermodal_old.NewTaskID().UUID()
+	assignID := intermodal_old.NewAssignmentID().UUID()
 	now := time.Now().UTC()
 	q := &fakeQueries{detail: &application.DispatchDetail{
 		ID:       id.UUID(),
-		PlanType: intermodal.PlanLiveLoad,
-		Status:   intermodal.StatusInProgress,
+		PlanType: intermodal_old.PlanLiveLoad,
+		Status:   intermodal_old.StatusInProgress,
 		Tasks: []application.TaskView{{
-			ID: taskID, No: 1, Action: intermodal.ActionAcquireChassis,
-			Status: intermodal.TaskPending, CreatedAt: now, UpdatedAt: now,
+			ID: taskID, No: 1, Action: intermodal_old.ActionAcquireChassis,
+			Status: intermodal_old.TaskPending, CreatedAt: now, UpdatedAt: now,
 		}},
 		Assignments: []application.AssignmentView{{
-			ID: assignID, Status: intermodal.AssignmentPending, CreatedAt: now, UpdatedAt: now,
+			ID: assignID, Status: intermodal_old.AssignmentPending, CreatedAt: now, UpdatedAt: now,
 		}},
 	}}
 	mux := serveFull(&fakeService{}, q)
@@ -424,7 +424,7 @@ func TestGetDispatch_IncludesChildren(t *testing.T) {
 
 func TestGetDispatch_NotFound(t *testing.T) {
 	mux := serveFull(&fakeService{}, &fakeQueries{detail: nil})
-	id := intermodal.NewDispatchID()
+	id := intermodal_old.NewDispatchID()
 	w := do(t, mux, http.MethodGet, dispatchesPath+"/"+id.String(), "")
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", w.Code)

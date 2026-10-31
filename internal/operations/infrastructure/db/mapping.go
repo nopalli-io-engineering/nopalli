@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // Conversions between the aggregate's snapshot values and pgx's wire types.
@@ -49,95 +49,95 @@ func cursorFromDB(v pgtype.Int4) int {
 
 // --- optional typed ids from scanned uuids (DB values are trusted) -------- //
 
-func optSourceQuote(p pgtype.UUID) *intermodal.SourceQuoteID {
+func optSourceQuote(p pgtype.UUID) *intermodal_old.SourceQuoteID {
 	if !p.Valid {
 		return nil
 	}
-	id, _ := intermodal.SourceQuoteIDFromUUID(p.Bytes)
+	id, _ := intermodal_old.SourceQuoteIDFromUUID(p.Bytes)
 	return &id
 }
 
-func optDispatcher(p pgtype.UUID) *intermodal.DispatcherID {
+func optDispatcher(p pgtype.UUID) *intermodal_old.DispatcherID {
 	if !p.Valid {
 		return nil
 	}
-	id, _ := intermodal.DispatcherIDFromUUID(p.Bytes)
+	id, _ := intermodal_old.DispatcherIDFromUUID(p.Bytes)
 	return &id
 }
 
-func optAssignment(p pgtype.UUID) *intermodal.AssignmentID {
+func optAssignment(p pgtype.UUID) *intermodal_old.AssignmentID {
 	if !p.Valid {
 		return nil
 	}
-	id, _ := intermodal.AssignmentIDFromUUID(p.Bytes)
+	id, _ := intermodal_old.AssignmentIDFromUUID(p.Bytes)
 	return &id
 }
 
-func optFacility(p pgtype.UUID) *intermodal.FacilityID {
+func optFacility(p pgtype.UUID) *intermodal_old.FacilityID {
 	if !p.Valid {
 		return nil
 	}
-	id, _ := intermodal.FacilityIDFromUUID(p.Bytes)
+	id, _ := intermodal_old.FacilityIDFromUUID(p.Bytes)
 	return &id
 }
 
-func optDriver(p pgtype.UUID) *intermodal.DriverID {
+func optDriver(p pgtype.UUID) *intermodal_old.DriverID {
 	if !p.Valid {
 		return nil
 	}
-	id, _ := intermodal.DriverIDFromUUID(p.Bytes)
+	id, _ := intermodal_old.DriverIDFromUUID(p.Bytes)
 	return &id
 }
 
-func optTruck(p pgtype.UUID) *intermodal.TruckID {
+func optTruck(p pgtype.UUID) *intermodal_old.TruckID {
 	if !p.Valid {
 		return nil
 	}
-	id, _ := intermodal.TruckIDFromUUID(p.Bytes)
+	id, _ := intermodal_old.TruckIDFromUUID(p.Bytes)
 	return &id
 }
 
 // --- non-null typed ids from primary-key columns -------------------------- //
 
-func mustFacilityID(p pgtype.UUID) intermodal.FacilityID {
-	id, _ := intermodal.FacilityIDFromUUID(p.Bytes)
+func mustFacilityID(p pgtype.UUID) intermodal_old.FacilityID {
+	id, _ := intermodal_old.FacilityIDFromUUID(p.Bytes)
 	return id
 }
 
-func mustTaskID(p pgtype.UUID) intermodal.TaskID {
-	id, _ := intermodal.TaskIDFromUUID(p.Bytes)
+func mustTaskID(p pgtype.UUID) intermodal_old.TaskID {
+	id, _ := intermodal_old.TaskIDFromUUID(p.Bytes)
 	return id
 }
 
-func mustAssignmentID(p pgtype.UUID) intermodal.AssignmentID {
-	id, _ := intermodal.AssignmentIDFromUUID(p.Bytes)
+func mustAssignmentID(p pgtype.UUID) intermodal_old.AssignmentID {
+	id, _ := intermodal_old.AssignmentIDFromUUID(p.Bytes)
 	return id
 }
 
-func mustChassisEpisodeID(p pgtype.UUID) intermodal.ChassisCustodyEpisodeID {
-	id, _ := intermodal.ChassisCustodyEpisodeIDFromUUID(p.Bytes)
+func mustChassisEpisodeID(p pgtype.UUID) intermodal_old.ChassisCustodyEpisodeID {
+	id, _ := intermodal_old.ChassisCustodyEpisodeIDFromUUID(p.Bytes)
 	return id
 }
 
-func mustContainerEpisodeID(p pgtype.UUID) intermodal.ContainerCustodyEpisodeID {
-	id, _ := intermodal.ContainerCustodyEpisodeIDFromUUID(p.Bytes)
+func mustContainerEpisodeID(p pgtype.UUID) intermodal_old.ContainerCustodyEpisodeID {
+	id, _ := intermodal_old.ContainerCustodyEpisodeIDFromUUID(p.Bytes)
 	return id
 }
 
 // --- value objects -------------------------------------------------------- //
 
-func chassisText(c *intermodal.ChassisNumber) pgtype.Text {
+func chassisText(c *intermodal_old.ChassisNumber) pgtype.Text {
 	if c == nil {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: c.String(), Valid: true}
 }
 
-func optChassis(t pgtype.Text) (*intermodal.ChassisNumber, error) {
+func optChassis(t pgtype.Text) (*intermodal_old.ChassisNumber, error) {
 	if !t.Valid || t.String == "" {
 		return nil, nil
 	}
-	c, err := intermodal.NewChassisNumber(t.String)
+	c, err := intermodal_old.NewChassisNumber(t.String)
 	if err != nil {
 		return nil, fmt.Errorf("operations: decode chassis number: %w", err)
 	}
@@ -146,7 +146,7 @@ func optChassis(t pgtype.Text) (*intermodal.ChassisNumber, error) {
 
 // encodeDetails serializes an task's details map to JSONB. Keyed
 // "container_number" to match rdt's TaskDetailsType vocabulary.
-func encodeDetails(c *intermodal.ContainerNumber) ([]byte, error) {
+func encodeDetails(c *intermodal_old.ContainerNumber) ([]byte, error) {
 	m := map[string]string{}
 	if c != nil {
 		m["container_number"] = c.String()
@@ -154,7 +154,7 @@ func encodeDetails(c *intermodal.ContainerNumber) ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func decodeContainerFromDetails(raw []byte) (*intermodal.ContainerNumber, error) {
+func decodeContainerFromDetails(raw []byte) (*intermodal_old.ContainerNumber, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
@@ -166,7 +166,7 @@ func decodeContainerFromDetails(raw []byte) (*intermodal.ContainerNumber, error)
 	if !ok || s == "" {
 		return nil, nil
 	}
-	c, err := intermodal.NewContainerNumber(s)
+	c, err := intermodal_old.NewContainerNumber(s)
 	if err != nil {
 		return nil, fmt.Errorf("operations: decode container number: %w", err)
 	}

@@ -1,7 +1,7 @@
 // Package intermodal is the domain model for the operations context's
 // intermodal drayage Dispatch aggregate (rdt: modules/operations/domain/
 // aggregates/intermodal_dispatch). Naming the package after the move family
-// (intermodal) rather than the aggregate keeps intermodal.Dispatch stutter-free
+// (intermodal) rather than the aggregate keeps intermodal_old.Dispatch stutter-free
 // and leaves room for sibling move types (e.g. flatbed). This file holds the
 // aggregate's typed identities (rdt: identity.py).
 //
@@ -9,7 +9,7 @@
 // say, a DriverID out of a slot expecting a TruckID, while the UUID plumbing
 // lives once in domain.ID. The New* constructors mint a fresh v7 id; the Parse*
 // constructors validate external input at the boundary.
-package intermodal
+package intermodal_old
 
 import (
 	"github.com/google/uuid"

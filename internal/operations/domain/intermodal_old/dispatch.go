@@ -1,4 +1,4 @@
-package intermodal
+package intermodal_old
 
 import (
 	"github.com/nopalli-io/nopalli/internal/core/domain"

@@ -1,4 +1,4 @@
-package intermodal
+package intermodal_old
 
 // This file is the aggregate's persistence contract — the Go analogue of rdt's
 // imperative mapping. Rather than let infrastructure reach into the aggregate's

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 	opsdb "github.com/nopalli-io/nopalli/internal/operations/infrastructure/db"
 )
 
@@ -32,7 +32,7 @@ func dsnOrSkip(t *testing.T) string {
 	return dsn
 }
 
-func setup(t *testing.T) (*coredb.UnitOfWork, func(intermodal.DispatchID) *opsdb.DispatchRepository) {
+func setup(t *testing.T) (*coredb.UnitOfWork, func(intermodal_old.DispatchID) *opsdb.DispatchRepository) {
 	t.Helper()
 	ctx := context.Background()
 	dsn := dsnOrSkip(t)
@@ -48,24 +48,24 @@ func setup(t *testing.T) (*coredb.UnitOfWork, func(intermodal.DispatchID) *opsdb
 
 	uow := coredb.NewUnitOfWork(pool)
 	// read repo bound to the pool (reads need no transaction)
-	readRepo := func(intermodal.DispatchID) *opsdb.DispatchRepository {
+	readRepo := func(intermodal_old.DispatchID) *opsdb.DispatchRepository {
 		return opsdb.NewDispatchRepository(pool, nil)
 	}
 	return uow, readRepo
 }
 
-func liveLoadDispatch(t *testing.T) *intermodal.Dispatch {
+func liveLoadDispatch(t *testing.T) *intermodal_old.Dispatch {
 	t.Helper()
-	container, err := intermodal.NewContainerNumber("MSCU1234567")
+	container, err := intermodal_old.NewContainerNumber("MSCU1234567")
 	if err != nil {
 		t.Fatal(err)
 	}
-	sq := intermodal.NewSourceQuoteID()
-	return intermodal.Queue(&sq, intermodal.LiveLoad{
+	sq := intermodal_old.NewSourceQuoteID()
+	return intermodal_old.Queue(&sq, intermodal_old.LiveLoad{
 		ContainerNumber:      container,
-		ContainerPickupRamp:  intermodal.NewFacilityID(),
-		ContainerDropoffRamp: intermodal.NewFacilityID(),
-		DockDoor:             intermodal.NewFacilityID(),
+		ContainerPickupRamp:  intermodal_old.NewFacilityID(),
+		ContainerDropoffRamp: intermodal_old.NewFacilityID(),
+		DockDoor:             intermodal_old.NewFacilityID(),
 	})
 }
 
@@ -110,9 +110,9 @@ func TestIntegration_SaveAdvances(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		dispatcher := intermodal.NewDispatcherID()
-		driver := intermodal.NewDriverID()
-		truck := intermodal.NewTruckID()
+		dispatcher := intermodal_old.NewDispatcherID()
+		driver := intermodal_old.NewDriverID()
+		truck := intermodal_old.NewTruckID()
 		loaded.Delegate(dispatcher)
 		if _, err := loaded.Assign(&driver, &truck); err != nil {
 			return err
@@ -123,8 +123,8 @@ func TestIntegration_SaveAdvances(t *testing.T) {
 		if err := loaded.Start(); err != nil {
 			return err
 		}
-		chassis, _ := intermodal.NewChassisNumber("CHAS-1")
-		if _, err := loaded.AcquireChassis(intermodal.NewFacilityID(), chassis); err != nil {
+		chassis, _ := intermodal_old.NewChassisNumber("CHAS-1")
+		if _, err := loaded.AcquireChassis(intermodal_old.NewFacilityID(), chassis); err != nil {
 			return err
 		}
 		return repo.Save(ctx, loaded)
@@ -136,7 +136,7 @@ func TestIntegration_SaveAdvances(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reload: %v", err)
 	}
-	if loaded.Status() != intermodal.StatusInProgress {
+	if loaded.Status() != intermodal_old.StatusInProgress {
 		t.Fatalf("status = %v, want in_progress", loaded.Status())
 	}
 	if loaded.Version() != 1 {
@@ -172,7 +172,7 @@ func TestIntegration_OptimisticConcurrency(t *testing.T) {
 		t.Fatalf("load second: %v", err)
 	}
 
-	first.Delegate(intermodal.NewDispatcherID())
+	first.Delegate(intermodal_old.NewDispatcherID())
 	if err := uow.Do(ctx, func(tx coredb.DBTX) error {
 		return opsdb.NewDispatchRepository(tx, nil).Save(ctx, first)
 	}); err != nil {
@@ -180,7 +180,7 @@ func TestIntegration_OptimisticConcurrency(t *testing.T) {
 	}
 
 	// The stale second save must be rejected.
-	second.Delegate(intermodal.NewDispatcherID())
+	second.Delegate(intermodal_old.NewDispatcherID())
 	err = uow.Do(ctx, func(tx coredb.DBTX) error {
 		return opsdb.NewDispatchRepository(tx, nil).Save(ctx, second)
 	})
@@ -235,8 +235,8 @@ WHERE dispatch_id = $1 ORDER BY task_no LIMIT 1`, id.UUID()).Scan(&createdAt, &u
 		if err != nil {
 			return err
 		}
-		loaded.Delegate(intermodal.NewDispatcherID())
-		driver, truck := intermodal.NewDriverID(), intermodal.NewTruckID()
+		loaded.Delegate(intermodal_old.NewDispatcherID())
+		driver, truck := intermodal_old.NewDriverID(), intermodal_old.NewTruckID()
 		if _, err := loaded.Assign(&driver, &truck); err != nil {
 			return err
 		}
@@ -264,7 +264,7 @@ func TestIntegration_GetNotFound(t *testing.T) {
 	ctx := context.Background()
 	_, readRepo := setup(t)
 
-	missing := intermodal.NewDispatchID()
+	missing := intermodal_old.NewDispatchID()
 	_, err := readRepo(missing).Get(ctx, missing)
 	if err == nil {
 		t.Fatal("expected a not-found error")

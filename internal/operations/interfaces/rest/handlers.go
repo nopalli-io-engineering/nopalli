@@ -11,28 +11,28 @@ import (
 
 	"github.com/nopalli-io/nopalli/internal/core/interface/httpx"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // CommandService is the slice of the application service the command handlers
 // need. Defined here (the consumer) so handlers can be tested with a fake;
 // *application.IntermodalDispatchService satisfies it.
 type CommandService interface {
-	CreateDispatch(ctx context.Context, move intermodal.MovePlan, sourceQuoteID *intermodal.SourceQuoteID) (intermodal.DispatchID, error)
-	Delegate(ctx context.Context, dispatchID intermodal.DispatchID, dispatcherID intermodal.DispatcherID) error
-	Assign(ctx context.Context, dispatchID intermodal.DispatchID, driverID *intermodal.DriverID, truckID *intermodal.TruckID) (intermodal.AssignmentID, error)
-	Approve(ctx context.Context, dispatchID intermodal.DispatchID) error
-	Start(ctx context.Context, dispatchID intermodal.DispatchID) error
-	Verify(ctx context.Context, dispatchID intermodal.DispatchID) error
-	AcquireChassis(ctx context.Context, dispatchID intermodal.DispatchID, facilityID intermodal.FacilityID, chassisNumber intermodal.ChassisNumber) error
-	PickUpContainer(ctx context.Context, dispatchID intermodal.DispatchID) error
-	PickUpPremountedContainer(ctx context.Context, dispatchID intermodal.DispatchID, chassisNumber intermodal.ChassisNumber) error
-	DeliverContainer(ctx context.Context, dispatchID intermodal.DispatchID) error
-	Hold(ctx context.Context, dispatchID intermodal.DispatchID) error
-	TakeContainer(ctx context.Context, dispatchID intermodal.DispatchID) error
-	DropContainer(ctx context.Context, dispatchID intermodal.DispatchID) error
-	DropPremountedContainer(ctx context.Context, dispatchID intermodal.DispatchID) error
-	ReturnChassis(ctx context.Context, dispatchID intermodal.DispatchID, facilityID intermodal.FacilityID) error
+	CreateDispatch(ctx context.Context, move intermodal_old.MovePlan, sourceQuoteID *intermodal_old.SourceQuoteID) (intermodal_old.DispatchID, error)
+	Delegate(ctx context.Context, dispatchID intermodal_old.DispatchID, dispatcherID intermodal_old.DispatcherID) error
+	Assign(ctx context.Context, dispatchID intermodal_old.DispatchID, driverID *intermodal_old.DriverID, truckID *intermodal_old.TruckID) (intermodal_old.AssignmentID, error)
+	Approve(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	Start(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	Verify(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	AcquireChassis(ctx context.Context, dispatchID intermodal_old.DispatchID, facilityID intermodal_old.FacilityID, chassisNumber intermodal_old.ChassisNumber) error
+	PickUpContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	PickUpPremountedContainer(ctx context.Context, dispatchID intermodal_old.DispatchID, chassisNumber intermodal_old.ChassisNumber) error
+	DeliverContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	Hold(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	TakeContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	DropContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	DropPremountedContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error
+	ReturnChassis(ctx context.Context, dispatchID intermodal_old.DispatchID, facilityID intermodal_old.FacilityID) error
 }
 
 var _ CommandService = (*application.IntermodalDispatchService)(nil)
@@ -61,9 +61,9 @@ func (h *Handlers) CreateDispatch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var sourceQuote *intermodal.SourceQuoteID
+	var sourceQuote *intermodal_old.SourceQuoteID
 	if body.SourceQuoteID != nil {
-		sq, err := intermodal.ParseSourceQuoteID(*body.SourceQuoteID)
+		sq, err := intermodal_old.ParseSourceQuoteID(*body.SourceQuoteID)
 		if err != nil {
 			badRequest(w, "invalid source_quote_id")
 			return
@@ -80,8 +80,8 @@ func (h *Handlers) CreateDispatch(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, CreatedResponse{ID: id.String()})
 }
 
-func (h *Handlers) toMovePlan(w http.ResponseWriter, body CreateDispatchRequest) (intermodal.MovePlan, bool) {
-	container, err := intermodal.NewContainerNumber(body.ContainerNumber)
+func (h *Handlers) toMovePlan(w http.ResponseWriter, body CreateDispatchRequest) (intermodal_old.MovePlan, bool) {
+	container, err := intermodal_old.NewContainerNumber(body.ContainerNumber)
 	if err != nil {
 		badRequest(w, "invalid container_number")
 		return nil, false
@@ -100,13 +100,13 @@ func (h *Handlers) toMovePlan(w http.ResponseWriter, body CreateDispatchRequest)
 	}
 
 	switch body.PlanType {
-	case intermodal.PlanLiveLoad:
-		return intermodal.LiveLoad{
+	case intermodal_old.PlanLiveLoad:
+		return intermodal_old.LiveLoad{
 			ContainerNumber: container, ContainerPickupRamp: pickup,
 			ContainerDropoffRamp: dropoff, DockDoor: dock, Premounted: body.Premounted,
 		}, true
-	case intermodal.PlanLiveUnload:
-		return intermodal.LiveUnload{
+	case intermodal_old.PlanLiveUnload:
+		return intermodal_old.LiveUnload{
 			ContainerNumber: container, ContainerPickupRamp: pickup,
 			ContainerDropoffRamp: dropoff, DockDoor: dock, Premounted: body.Premounted,
 		}, true
@@ -129,7 +129,7 @@ func (h *Handlers) Delegate(w http.ResponseWriter, r *http.Request) {
 	if !httpx.DecodeJSON(w, r, &body) {
 		return
 	}
-	dispatcher, err := intermodal.ParseDispatcherID(body.DispatcherID)
+	dispatcher, err := intermodal_old.ParseDispatcherID(body.DispatcherID)
 	if err != nil {
 		badRequest(w, "invalid dispatcher_id")
 		return
@@ -151,18 +151,18 @@ func (h *Handlers) Assign(w http.ResponseWriter, r *http.Request) {
 	if !httpx.DecodeJSON(w, r, &body) {
 		return
 	}
-	var driver *intermodal.DriverID
+	var driver *intermodal_old.DriverID
 	if body.DriverID != nil {
-		d, err := intermodal.ParseDriverID(*body.DriverID)
+		d, err := intermodal_old.ParseDriverID(*body.DriverID)
 		if err != nil {
 			badRequest(w, "invalid driver_id")
 			return
 		}
 		driver = &d
 	}
-	var truck *intermodal.TruckID
+	var truck *intermodal_old.TruckID
 	if body.TruckID != nil {
-		tk, err := intermodal.ParseTruckID(*body.TruckID)
+		tk, err := intermodal_old.ParseTruckID(*body.TruckID)
 		if err != nil {
 			badRequest(w, "invalid truck_id")
 			return
@@ -209,7 +209,7 @@ func (h *Handlers) AcquireChassis(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	chassis, err := intermodal.NewChassisNumber(body.ChassisNumber)
+	chassis, err := intermodal_old.NewChassisNumber(body.ChassisNumber)
 	if err != nil {
 		badRequest(w, "invalid chassis_number")
 		return
@@ -236,7 +236,7 @@ func (h *Handlers) PickUpPremountedContainer(w http.ResponseWriter, r *http.Requ
 	if !httpx.DecodeJSON(w, r, &body) {
 		return
 	}
-	chassis, err := intermodal.NewChassisNumber(body.ChassisNumber)
+	chassis, err := intermodal_old.NewChassisNumber(body.ChassisNumber)
 	if err != nil {
 		badRequest(w, "invalid chassis_number")
 		return
@@ -298,7 +298,7 @@ func (h *Handlers) ReturnChassis(w http.ResponseWriter, r *http.Request) {
 
 // command runs a no-body transition: parse the path id, invoke run, and write
 // 204 on success or the mapped error otherwise.
-func (h *Handlers) command(w http.ResponseWriter, r *http.Request, run func(context.Context, intermodal.DispatchID) error) {
+func (h *Handlers) command(w http.ResponseWriter, r *http.Request, run func(context.Context, intermodal_old.DispatchID) error) {
 	id, ok := h.dispatchID(w, r)
 	if !ok {
 		return
@@ -310,11 +310,11 @@ func (h *Handlers) command(w http.ResponseWriter, r *http.Request, run func(cont
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handlers) dispatchID(w http.ResponseWriter, r *http.Request) (intermodal.DispatchID, bool) {
-	id, err := intermodal.ParseDispatchID(r.PathValue("dispatchID"))
+func (h *Handlers) dispatchID(w http.ResponseWriter, r *http.Request) (intermodal_old.DispatchID, bool) {
+	id, err := intermodal_old.ParseDispatchID(r.PathValue("dispatchID"))
 	if err != nil {
 		badRequest(w, "invalid dispatch id")
-		return intermodal.DispatchID{}, false
+		return intermodal_old.DispatchID{}, false
 	}
 	return id, true
 }
@@ -328,11 +328,11 @@ func (h *Handlers) writeErr(w http.ResponseWriter, err error) {
 	httpx.WriteProblem(w, status, code, message)
 }
 
-func parseFacility(w http.ResponseWriter, raw, field string) (intermodal.FacilityID, bool) {
-	id, err := intermodal.ParseFacilityID(raw)
+func parseFacility(w http.ResponseWriter, raw, field string) (intermodal_old.FacilityID, bool) {
+	id, err := intermodal_old.ParseFacilityID(raw)
 	if err != nil {
 		badRequest(w, "invalid "+field)
-		return intermodal.FacilityID{}, false
+		return intermodal_old.FacilityID{}, false
 	}
 	return id, true
 }

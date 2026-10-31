@@ -8,7 +8,7 @@ import (
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
-	intermodal "github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 	opsdb "github.com/nopalli-io/nopalli/internal/operations/infrastructure/db"
 )
 
@@ -49,9 +49,9 @@ func TestIntegration_DispatchQueries(t *testing.T) {
 	if err := uow.Do(ctx, func(r application.Repository) error { return r.Add(ctx, inProgress) }); err != nil {
 		t.Fatalf("add in-progress: %v", err)
 	}
-	dispatcher := intermodal.NewDispatcherID()
-	driver := intermodal.NewDriverID()
-	truck := intermodal.NewTruckID()
+	dispatcher := intermodal_old.NewDispatcherID()
+	driver := intermodal_old.NewDriverID()
+	truck := intermodal_old.NewTruckID()
 	if err := uow.Do(ctx, func(r application.Repository) error {
 		d, err := r.Get(ctx, inProgress.ID())
 		if err != nil {
@@ -84,7 +84,7 @@ func TestIntegration_DispatchQueries(t *testing.T) {
 	if detail == nil {
 		t.Fatal("expected the queued dispatch")
 	}
-	if detail.Status != intermodal.StatusQueued || detail.PlanType != intermodal.PlanLiveLoad {
+	if detail.Status != intermodal_old.StatusQueued || detail.PlanType != intermodal_old.PlanLiveLoad {
 		t.Fatalf("detail = %+v, want queued/live_load", detail)
 	}
 	if detail.DispatcherID != nil {
@@ -102,7 +102,7 @@ func TestIntegration_DispatchQueries(t *testing.T) {
 		t.Fatalf("visible-nothing get = %v,%v, want nil,nil", d, err)
 	}
 	// Genuinely missing id.
-	if d, err := q.GetDispatch(ctx, intermodal.NewDispatchID().UUID(), application.VisibleAll()); err != nil || d != nil {
+	if d, err := q.GetDispatch(ctx, intermodal_old.NewDispatchID().UUID(), application.VisibleAll()); err != nil || d != nil {
 		t.Fatalf("missing get = %v,%v, want nil,nil", d, err)
 	}
 
@@ -126,7 +126,7 @@ func TestIntegration_DispatchQueries(t *testing.T) {
 
 	// Status filter: queued contains the queued one, not the in-progress one,
 	// and every returned row is queued.
-	queuedStatus := intermodal.StatusQueued
+	queuedStatus := intermodal_old.StatusQueued
 	ql, err := q.ListDispatches(ctx, application.VisibleAll(), application.ListFilter{Status: &queuedStatus})
 	if err != nil {
 		t.Fatalf("list queued: %v", err)
@@ -135,7 +135,7 @@ func TestIntegration_DispatchQueries(t *testing.T) {
 		t.Fatal("queued filter must include the queued dispatch and exclude the in-progress one")
 	}
 	for _, s := range ql {
-		if s.Status != intermodal.StatusQueued {
+		if s.Status != intermodal_old.StatusQueued {
 			t.Fatalf("status filter leaked a %v row", s.Status)
 		}
 	}
@@ -171,8 +171,8 @@ func TestIntegration_DispatchDetailChildren(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		loaded.Delegate(intermodal.NewDispatcherID())
-		driver, truck := intermodal.NewDriverID(), intermodal.NewTruckID()
+		loaded.Delegate(intermodal_old.NewDispatcherID())
+		driver, truck := intermodal_old.NewDriverID(), intermodal_old.NewTruckID()
 		if _, err := loaded.Assign(&driver, &truck); err != nil {
 			return err
 		}
@@ -182,8 +182,8 @@ func TestIntegration_DispatchDetailChildren(t *testing.T) {
 		if err := loaded.Start(); err != nil {
 			return err
 		}
-		chassis, _ := intermodal.NewChassisNumber("CHAS-1")
-		if _, err := loaded.AcquireChassis(intermodal.NewFacilityID(), chassis); err != nil {
+		chassis, _ := intermodal_old.NewChassisNumber("CHAS-1")
+		if _, err := loaded.AcquireChassis(intermodal_old.NewFacilityID(), chassis); err != nil {
 			return err
 		}
 		return repo.Save(ctx, loaded)

@@ -11,7 +11,7 @@ import (
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 const (
@@ -81,8 +81,8 @@ LIMIT $1 OFFSET $2`, limit, offset, statusArg)
 		out = append(out, application.DispatchSummary{
 			ID:            uuid.UUID(id.Bytes),
 			SourceQuoteID: optUUID(sourceQuote),
-			PlanType:      intermodal.PlanType(planType),
-			Status:        intermodal.Status(status),
+			PlanType:      intermodal_old.PlanType(planType),
+			Status:        intermodal_old.Status(status),
 			CreatedAt:     createdAt.Time,
 			UpdatedAt:     updatedAt.Time,
 		})
@@ -118,8 +118,8 @@ WHERE id = $1`, pgtype.UUID{Bytes: id, Valid: true}).
 		ID:            uuid.UUID(rowID.Bytes),
 		SourceQuoteID: optUUID(sourceQuote),
 		DispatcherID:  optUUID(dispatcher),
-		PlanType:      intermodal.PlanType(planType),
-		Status:        intermodal.Status(status),
+		PlanType:      intermodal_old.PlanType(planType),
+		Status:        intermodal_old.Status(status),
 		CreatedAt:     createdAt.Time,
 		UpdatedAt:     updatedAt.Time,
 	}
@@ -167,9 +167,9 @@ ORDER BY task_no`, pgtype.UUID{Bytes: id, Valid: true})
 		out = append(out, application.TaskView{
 			ID:               uuid.UUID(taskID.Bytes),
 			No:               int(taskNo),
-			Action:           intermodal.Action(action),
+			Action:           intermodal_old.Action(action),
 			FacilityID:       optUUID(facility),
-			Status:           intermodal.TaskStatus(status),
+			Status:           intermodal_old.TaskStatus(status),
 			AttributedDriver: optUUID(driver),
 			AttributedTruck:  optUUID(truck),
 			CreatedAt:        createdAt.Time,
@@ -204,7 +204,7 @@ ORDER BY created_at`, pgtype.UUID{Bytes: id, Valid: true})
 			ID:        uuid.UUID(assignmentID.Bytes),
 			DriverID:  optUUID(driver),
 			TruckID:   optUUID(truck),
-			Status:    intermodal.AssignmentStatus(status),
+			Status:    intermodal_old.AssignmentStatus(status),
 			CreatedAt: createdAt.Time,
 			UpdatedAt: updatedAt.Time,
 		})
@@ -236,7 +236,7 @@ ORDER BY created_at`, pgtype.UUID{Bytes: id, Valid: true})
 		}
 		out = append(out, application.ChassisEpisodeView{
 			ID:            uuid.UUID(episodeID.Bytes),
-			Status:        intermodal.CustodyEpisodeStatus(status),
+			Status:        intermodal_old.CustodyEpisodeStatus(status),
 			SourcedFrom:   uuid.UUID(sourcedFrom.Bytes),
 			StationedAt:   optUUID(stationedAt),
 			ChassisNumber: optText(chassisNumber),
@@ -270,7 +270,7 @@ ORDER BY created_at`, pgtype.UUID{Bytes: id, Valid: true})
 		}
 		out = append(out, application.ContainerEpisodeView{
 			ID:              uuid.UUID(episodeID.Bytes),
-			Status:          intermodal.CustodyEpisodeStatus(status),
+			Status:          intermodal_old.CustodyEpisodeStatus(status),
 			SourcedFrom:     uuid.UUID(sourcedFrom.Bytes),
 			StationedAt:     optUUID(stationedAt),
 			ContainerNumber: containerNumber,

@@ -1,4 +1,4 @@
-package intermodal
+package intermodal_old
 
 // Dispatch lifecycle invariants — cross-plan (rdt: tests/test_dispatch_lifecycle.py).
 // These exercise the aggregate's state machine, not any plan's action sequence;

@@ -11,7 +11,7 @@ package application
 import (
 	"context"
 
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // Repository is the persistence port the service needs (rdt: domain/ports/
@@ -19,9 +19,9 @@ import (
 // identity map). Defined here, in the consumer, and satisfied by the pgx
 // adapter in operations/infrastructure/db.
 type Repository interface {
-	Get(ctx context.Context, id intermodal.DispatchID) (*intermodal.Dispatch, error)
-	Add(ctx context.Context, d *intermodal.Dispatch) error
-	Save(ctx context.Context, d *intermodal.Dispatch) error
+	Get(ctx context.Context, id intermodal_old.DispatchID) (*intermodal_old.Dispatch, error)
+	Add(ctx context.Context, d *intermodal_old.Dispatch) error
+	Save(ctx context.Context, d *intermodal_old.Dispatch) error
 }
 
 // UnitOfWork runs fn inside one transaction, handing it a Repository bound to
@@ -86,19 +86,19 @@ func NewIntermodalDispatchService(uow UnitOfWork, access AccessControl) *Intermo
 // ported yet: it depends on the transactional inbox (ProcessedEventStore),
 // which is a later increment.
 func (s *IntermodalDispatchService) CreateDispatch(
-	ctx context.Context, move intermodal.MovePlan, sourceQuoteID *intermodal.SourceQuoteID,
-) (intermodal.DispatchID, error) {
+	ctx context.Context, move intermodal_old.MovePlan, sourceQuoteID *intermodal_old.SourceQuoteID,
+) (intermodal_old.DispatchID, error) {
 	if err := s.access.Require(ctx, permCreate); err != nil {
-		return intermodal.DispatchID{}, err
+		return intermodal_old.DispatchID{}, err
 	}
-	var id intermodal.DispatchID
+	var id intermodal_old.DispatchID
 	err := s.uow.Do(ctx, func(repo Repository) error {
-		d := intermodal.Queue(sourceQuoteID, move)
+		d := intermodal_old.Queue(sourceQuoteID, move)
 		id = d.ID()
 		return repo.Add(ctx, d)
 	})
 	if err != nil {
-		return intermodal.DispatchID{}, err
+		return intermodal_old.DispatchID{}, err
 	}
 	return id, nil
 }
@@ -107,9 +107,9 @@ func (s *IntermodalDispatchService) CreateDispatch(
 
 // Delegate assigns the dispatch to a dispatcher.
 func (s *IntermodalDispatchService) Delegate(
-	ctx context.Context, dispatchID intermodal.DispatchID, dispatcherID intermodal.DispatcherID,
+	ctx context.Context, dispatchID intermodal_old.DispatchID, dispatcherID intermodal_old.DispatcherID,
 ) error {
-	return s.mutate(ctx, permDelegate, dispatchID, func(d *intermodal.Dispatch) error {
+	return s.mutate(ctx, permDelegate, dispatchID, func(d *intermodal_old.Dispatch) error {
 		d.Delegate(dispatcherID)
 		return nil
 	})
@@ -118,13 +118,13 @@ func (s *IntermodalDispatchService) Delegate(
 // Assign proposes or updates the driver+truck pair; returns the current
 // assignment id.
 func (s *IntermodalDispatchService) Assign(
-	ctx context.Context, dispatchID intermodal.DispatchID,
-	driverID *intermodal.DriverID, truckID *intermodal.TruckID,
-) (intermodal.AssignmentID, error) {
+	ctx context.Context, dispatchID intermodal_old.DispatchID,
+	driverID *intermodal_old.DriverID, truckID *intermodal_old.TruckID,
+) (intermodal_old.AssignmentID, error) {
 	if err := s.access.Require(ctx, permAssign); err != nil {
-		return intermodal.AssignmentID{}, err
+		return intermodal_old.AssignmentID{}, err
 	}
-	var assignmentID intermodal.AssignmentID
+	var assignmentID intermodal_old.AssignmentID
 	err := s.uow.Do(ctx, func(repo Repository) error {
 		d, err := repo.Get(ctx, dispatchID)
 		if err != nil {
@@ -137,14 +137,14 @@ func (s *IntermodalDispatchService) Assign(
 		return repo.Save(ctx, d)
 	})
 	if err != nil {
-		return intermodal.AssignmentID{}, err
+		return intermodal_old.AssignmentID{}, err
 	}
 	return assignmentID, nil
 }
 
 // Approve marks a delegated, fully-assigned dispatch ready to start.
-func (s *IntermodalDispatchService) Approve(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permApprove, dispatchID, (*intermodal.Dispatch).Approve)
+func (s *IntermodalDispatchService) Approve(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permApprove, dispatchID, (*intermodal_old.Dispatch).Approve)
 }
 
 // Start begins task execution.
@@ -153,13 +153,13 @@ func (s *IntermodalDispatchService) Approve(ctx context.Context, dispatchID inte
 // driver/truck is busy on another active dispatch). That check is intentionally
 // omitted for now; it returns with a domain service + port that will be
 // reintroduced as a dependency of this method.
-func (s *IntermodalDispatchService) Start(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permStart, dispatchID, (*intermodal.Dispatch).Start)
+func (s *IntermodalDispatchService) Start(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permStart, dispatchID, (*intermodal_old.Dispatch).Start)
 }
 
 // Verify marks a completed dispatch verified.
-func (s *IntermodalDispatchService) Verify(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permVerify, dispatchID, (*intermodal.Dispatch).Verify)
+func (s *IntermodalDispatchService) Verify(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permVerify, dispatchID, (*intermodal_old.Dispatch).Verify)
 }
 
 // --- task execution ----------------------------------------------------- //
@@ -170,18 +170,18 @@ func (s *IntermodalDispatchService) Verify(ctx context.Context, dispatchID inter
 
 // AcquireChassis executes the acquire-chassis step.
 func (s *IntermodalDispatchService) AcquireChassis(
-	ctx context.Context, dispatchID intermodal.DispatchID,
-	facilityID intermodal.FacilityID, chassisNumber intermodal.ChassisNumber,
+	ctx context.Context, dispatchID intermodal_old.DispatchID,
+	facilityID intermodal_old.FacilityID, chassisNumber intermodal_old.ChassisNumber,
 ) error {
-	return s.mutate(ctx, permAcquireChassis, dispatchID, func(d *intermodal.Dispatch) error {
+	return s.mutate(ctx, permAcquireChassis, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.AcquireChassis(facilityID, chassisNumber)
 		return err
 	})
 }
 
 // PickUpContainer executes the pick-up-container step.
-func (s *IntermodalDispatchService) PickUpContainer(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permPickUpContainer, dispatchID, func(d *intermodal.Dispatch) error {
+func (s *IntermodalDispatchService) PickUpContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permPickUpContainer, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.PickUpContainer()
 		return err
 	})
@@ -189,49 +189,49 @@ func (s *IntermodalDispatchService) PickUpContainer(ctx context.Context, dispatc
 
 // PickUpPremountedContainer executes the premounted pick-up step.
 func (s *IntermodalDispatchService) PickUpPremountedContainer(
-	ctx context.Context, dispatchID intermodal.DispatchID, chassisNumber intermodal.ChassisNumber,
+	ctx context.Context, dispatchID intermodal_old.DispatchID, chassisNumber intermodal_old.ChassisNumber,
 ) error {
-	return s.mutate(ctx, permPickUpPremounted, dispatchID, func(d *intermodal.Dispatch) error {
+	return s.mutate(ctx, permPickUpPremounted, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.PickUpPremountedContainer(chassisNumber)
 		return err
 	})
 }
 
 // DeliverContainer executes the deliver-container step.
-func (s *IntermodalDispatchService) DeliverContainer(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permDeliverContainer, dispatchID, func(d *intermodal.Dispatch) error {
+func (s *IntermodalDispatchService) DeliverContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permDeliverContainer, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.DeliverContainer()
 		return err
 	})
 }
 
 // Hold executes the hold step.
-func (s *IntermodalDispatchService) Hold(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permHold, dispatchID, func(d *intermodal.Dispatch) error {
+func (s *IntermodalDispatchService) Hold(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permHold, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.Hold()
 		return err
 	})
 }
 
 // TakeContainer executes the take-container step.
-func (s *IntermodalDispatchService) TakeContainer(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permTakeContainer, dispatchID, func(d *intermodal.Dispatch) error {
+func (s *IntermodalDispatchService) TakeContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permTakeContainer, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.TakeContainer()
 		return err
 	})
 }
 
 // DropContainer executes the drop-container step.
-func (s *IntermodalDispatchService) DropContainer(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permDropContainer, dispatchID, func(d *intermodal.Dispatch) error {
+func (s *IntermodalDispatchService) DropContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permDropContainer, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.DropContainer()
 		return err
 	})
 }
 
 // DropPremountedContainer executes the premounted drop step.
-func (s *IntermodalDispatchService) DropPremountedContainer(ctx context.Context, dispatchID intermodal.DispatchID) error {
-	return s.mutate(ctx, permDropPremountedContainer, dispatchID, func(d *intermodal.Dispatch) error {
+func (s *IntermodalDispatchService) DropPremountedContainer(ctx context.Context, dispatchID intermodal_old.DispatchID) error {
+	return s.mutate(ctx, permDropPremountedContainer, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.DropPremountedContainer()
 		return err
 	})
@@ -239,9 +239,9 @@ func (s *IntermodalDispatchService) DropPremountedContainer(ctx context.Context,
 
 // ReturnChassis executes the return-chassis step.
 func (s *IntermodalDispatchService) ReturnChassis(
-	ctx context.Context, dispatchID intermodal.DispatchID, facilityID intermodal.FacilityID,
+	ctx context.Context, dispatchID intermodal_old.DispatchID, facilityID intermodal_old.FacilityID,
 ) error {
-	return s.mutate(ctx, permReturnChassis, dispatchID, func(d *intermodal.Dispatch) error {
+	return s.mutate(ctx, permReturnChassis, dispatchID, func(d *intermodal_old.Dispatch) error {
 		_, err := d.ReturnChassis(facilityID)
 		return err
 	})
@@ -254,8 +254,8 @@ func (s *IntermodalDispatchService) ReturnChassis(
 func (s *IntermodalDispatchService) mutate(
 	ctx context.Context,
 	permission string,
-	dispatchID intermodal.DispatchID,
-	apply func(*intermodal.Dispatch) error,
+	dispatchID intermodal_old.DispatchID,
+	apply func(*intermodal_old.Dispatch) error,
 ) error {
 	if err := s.access.Require(ctx, permission); err != nil {
 		return err

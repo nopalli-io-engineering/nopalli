@@ -5,7 +5,7 @@ import (
 
 	"github.com/nopalli-io/nopalli/internal/core/domain"
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // statusFor maps an error returned by the application service to an HTTP status
@@ -15,7 +15,7 @@ import (
 func statusFor(err error) (status int, code string) {
 	switch {
 	// Boundary/value validation that surfaced from the domain.
-	case errors.Is(err, intermodal.ErrInvalidValue), errors.Is(err, domain.ErrInvalidID):
+	case errors.Is(err, intermodal_old.ErrInvalidValue), errors.Is(err, domain.ErrInvalidID):
 		return 400, "invalid_request"
 	// Optimistic-concurrency loss — safe to retry after re-reading.
 	case errors.Is(err, coredb.ErrConcurrencyConflict):

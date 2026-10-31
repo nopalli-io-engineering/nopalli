@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // Query ports for the operations read side (rdt: application/queries.py). The
@@ -32,7 +32,7 @@ func VisibleNothing() Visibility { return Visibility{} }
 // ListFilter narrows and pages a dispatch listing. A nil Status means all
 // statuses; Limit <= 0 and Offset < 0 are normalized by the adapter.
 type ListFilter struct {
-	Status *intermodal.Status
+	Status *intermodal_old.Status
 	Limit  int
 	Offset int
 }

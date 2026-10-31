@@ -6,7 +6,7 @@ import (
 
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
-	intermodal "github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 	opsdb "github.com/nopalli-io/nopalli/internal/operations/infrastructure/db"
 )
 
@@ -30,15 +30,15 @@ func TestIntegration_ServiceFullLifecycle(t *testing.T) {
 	uow := opsdb.NewUnitOfWork(pool, nil)
 	svc := application.NewIntermodalDispatchService(uow, application.AllowAll{})
 
-	container, err := intermodal.NewContainerNumber("MSCU1234567")
+	container, err := intermodal_old.NewContainerNumber("MSCU1234567")
 	if err != nil {
 		t.Fatal(err)
 	}
-	move := intermodal.LiveLoad{
+	move := intermodal_old.LiveLoad{
 		ContainerNumber:      container,
-		ContainerPickupRamp:  intermodal.NewFacilityID(),
-		ContainerDropoffRamp: intermodal.NewFacilityID(),
-		DockDoor:             intermodal.NewFacilityID(),
+		ContainerPickupRamp:  intermodal_old.NewFacilityID(),
+		ContainerDropoffRamp: intermodal_old.NewFacilityID(),
+		DockDoor:             intermodal_old.NewFacilityID(),
 	}
 
 	id, err := svc.CreateDispatch(ctx, move, nil)
@@ -46,11 +46,11 @@ func TestIntegration_ServiceFullLifecycle(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	dispatcher := intermodal.NewDispatcherID()
-	driver := intermodal.NewDriverID()
-	truck := intermodal.NewTruckID()
-	chassis, _ := intermodal.NewChassisNumber("CHAS-1")
-	yard := intermodal.NewFacilityID()
+	dispatcher := intermodal_old.NewDispatcherID()
+	driver := intermodal_old.NewDriverID()
+	truck := intermodal_old.NewTruckID()
+	chassis, _ := intermodal_old.NewChassisNumber("CHAS-1")
+	yard := intermodal_old.NewFacilityID()
 
 	steps := []struct {
 		label string
@@ -80,7 +80,7 @@ func TestIntegration_ServiceFullLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reload: %v", err)
 	}
-	if loaded.Status() != intermodal.StatusVerified {
+	if loaded.Status() != intermodal_old.StatusVerified {
 		t.Fatalf("persisted status = %v, want verified", loaded.Status())
 	}
 	if loaded.Version() == 0 {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/nopalli-io/nopalli/internal/core/interface/httpx"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
-	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal"
+	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
 // Query (read) endpoints. Reads are served from flat projections, never by
@@ -62,7 +62,7 @@ func parseListFilter(w http.ResponseWriter, r *http.Request) (application.ListFi
 	var filter application.ListFilter
 
 	if raw := q.Get("status"); raw != "" {
-		status := intermodal.Status(raw)
+		status := intermodal_old.Status(raw)
 		if !status.Valid() {
 			badRequest(w, "invalid status")
 			return application.ListFilter{}, false
