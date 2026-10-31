@@ -27,20 +27,20 @@ type DispatchSnapshot struct {
 	Cursor              int
 	Version             int
 	CurrentAssignmentID *AssignmentID
-	AgendaItems         []AgendaItemSnapshot
+	Tasks               []TaskSnapshot
 	Assignments         []AssignmentSnapshot
 	ChassisEpisodes     []ChassisEpisodeSnapshot
 	ContainerEpisodes   []ContainerEpisodeSnapshot
 }
 
-// AgendaItemSnapshot is one agenda row.
-type AgendaItemSnapshot struct {
-	ID               AgendaItemID
-	ItemNo           int
+// TaskSnapshot is one task row.
+type TaskSnapshot struct {
+	ID               TaskID
+	No               int
 	Action           Action
 	FacilityID       *FacilityID
-	Status           AgendaItemStatus
-	Container        *ContainerNumber // the item's details.container, if any
+	Status           TaskStatus
+	Container        *ContainerNumber // the task's details.container, if any
 	AttributedDriver *DriverID
 	AttributedTruck  *TruckID
 }
@@ -83,16 +83,16 @@ func (d *Dispatch) Snapshot() DispatchSnapshot {
 		Version:             d.version,
 		CurrentAssignmentID: d.currentAssignmentID,
 	}
-	for _, i := range d.agendaItems {
-		s.AgendaItems = append(s.AgendaItems, AgendaItemSnapshot{
-			ID:               i.id,
-			ItemNo:           i.itemNo,
-			Action:           i.action,
-			FacilityID:       i.facilityID,
-			Status:           i.status,
-			Container:        nonZeroContainer(i.details.container),
-			AttributedDriver: nonZeroDriver(i.attributedDriver),
-			AttributedTruck:  nonZeroTruck(i.attributedTruck),
+	for _, t := range d.tasks {
+		s.Tasks = append(s.Tasks, TaskSnapshot{
+			ID:               t.id,
+			No:               t.no,
+			Action:           t.action,
+			FacilityID:       t.facilityID,
+			Status:           t.status,
+			Container:        nonZeroContainer(t.details.container),
+			AttributedDriver: nonZeroDriver(t.attributedDriver),
+			AttributedTruck:  nonZeroTruck(t.attributedTruck),
 		})
 	}
 	for _, a := range d.assignments {
@@ -137,20 +137,20 @@ func Reconstitute(s DispatchSnapshot) *Dispatch {
 		version:             s.Version,
 		currentAssignmentID: s.CurrentAssignmentID,
 	}
-	for _, i := range s.AgendaItems {
-		var details itemDetails
-		if i.Container != nil {
-			details.container = *i.Container
+	for _, t := range s.Tasks {
+		var details taskDetails
+		if t.Container != nil {
+			details.container = *t.Container
 		}
-		d.agendaItems = append(d.agendaItems, &AgendaItem{
-			id:               i.ID,
-			itemNo:           i.ItemNo,
-			action:           i.Action,
-			facilityID:       i.FacilityID,
-			status:           i.Status,
+		d.tasks = append(d.tasks, &Task{
+			id:               t.ID,
+			no:               t.No,
+			action:           t.Action,
+			facilityID:       t.FacilityID,
+			status:           t.Status,
 			details:          details,
-			attributedDriver: derefDriver(i.AttributedDriver),
-			attributedTruck:  derefTruck(i.AttributedTruck),
+			attributedDriver: derefDriver(t.AttributedDriver),
+			attributedTruck:  derefTruck(t.AttributedTruck),
 		})
 	}
 	for _, a := range s.Assignments {

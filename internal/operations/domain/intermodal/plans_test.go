@@ -14,7 +14,7 @@ func mustContainer(t *testing.T, raw string) ContainerNumber {
 	return c
 }
 
-func agendaActions(specs []AgendaItemSpec) []Action {
+func taskActions(specs []TaskSpec) []Action {
 	out := make([]Action, len(specs))
 	for i, s := range specs {
 		out[i] = s.Action
@@ -22,14 +22,14 @@ func agendaActions(specs []AgendaItemSpec) []Action {
 	return out
 }
 
-func TestLiveLoad_AgendaOrder(t *testing.T) {
+func TestLiveLoad_TaskOrder(t *testing.T) {
 	plan := LiveLoad{
 		ContainerNumber:      mustContainer(t, "MSKU1"),
 		ContainerPickupRamp:  NewFacilityID(),
 		ContainerDropoffRamp: NewFacilityID(),
 		DockDoor:             NewFacilityID(),
 	}
-	got := agendaActions(plan.ToAgendaSpec())
+	got := taskActions(plan.ToTasksSpec())
 	want := []Action{
 		ActionAcquireChassis,
 		ActionPickUpEmptyContainer,
@@ -40,11 +40,11 @@ func TestLiveLoad_AgendaOrder(t *testing.T) {
 		ActionReturnChassis,
 	}
 	if !slices.Equal(got, want) {
-		t.Fatalf("live-load agenda\n got: %v\nwant: %v", got, want)
+		t.Fatalf("live-load tasks\n got: %v\nwant: %v", got, want)
 	}
 }
 
-func TestLiveLoad_PremountedAgendaOrder(t *testing.T) {
+func TestLiveLoad_PremountedTaskOrder(t *testing.T) {
 	plan := LiveLoad{
 		ContainerNumber:      mustContainer(t, "MSKU1"),
 		ContainerPickupRamp:  NewFacilityID(),
@@ -52,7 +52,7 @@ func TestLiveLoad_PremountedAgendaOrder(t *testing.T) {
 		DockDoor:             NewFacilityID(),
 		Premounted:           true,
 	}
-	got := agendaActions(plan.ToAgendaSpec())
+	got := taskActions(plan.ToTasksSpec())
 	want := []Action{
 		ActionPickUpEmptyPremountedContainer,
 		ActionDeliverEmptyContainer,
@@ -61,18 +61,18 @@ func TestLiveLoad_PremountedAgendaOrder(t *testing.T) {
 		ActionDropLoadedPremountedContainer,
 	}
 	if !slices.Equal(got, want) {
-		t.Fatalf("premounted live-load agenda\n got: %v\nwant: %v", got, want)
+		t.Fatalf("premounted live-load tasks\n got: %v\nwant: %v", got, want)
 	}
 }
 
-func TestLiveUnload_AgendaOrder(t *testing.T) {
+func TestLiveUnload_TaskOrder(t *testing.T) {
 	plan := LiveUnload{
 		ContainerNumber:      mustContainer(t, "MSKU2"),
 		ContainerPickupRamp:  NewFacilityID(),
 		ContainerDropoffRamp: NewFacilityID(),
 		DockDoor:             NewFacilityID(),
 	}
-	got := agendaActions(plan.ToAgendaSpec())
+	got := taskActions(plan.ToTasksSpec())
 	want := []Action{
 		ActionAcquireChassis,
 		ActionPickUpLoadedContainer,
@@ -83,11 +83,11 @@ func TestLiveUnload_AgendaOrder(t *testing.T) {
 		ActionReturnChassis,
 	}
 	if !slices.Equal(got, want) {
-		t.Fatalf("live-unload agenda\n got: %v\nwant: %v", got, want)
+		t.Fatalf("live-unload tasks\n got: %v\nwant: %v", got, want)
 	}
 }
 
-func TestLiveUnload_PremountedAgendaOrder(t *testing.T) {
+func TestLiveUnload_PremountedTaskOrder(t *testing.T) {
 	plan := LiveUnload{
 		ContainerNumber:      mustContainer(t, "MSKU2"),
 		ContainerPickupRamp:  NewFacilityID(),
@@ -95,7 +95,7 @@ func TestLiveUnload_PremountedAgendaOrder(t *testing.T) {
 		DockDoor:             NewFacilityID(),
 		Premounted:           true,
 	}
-	got := agendaActions(plan.ToAgendaSpec())
+	got := taskActions(plan.ToTasksSpec())
 	want := []Action{
 		ActionPickUpLoadedPremountedContainer,
 		ActionDeliverLoadedContainer,
@@ -104,12 +104,12 @@ func TestLiveUnload_PremountedAgendaOrder(t *testing.T) {
 		ActionDropEmptyPremountedContainer,
 	}
 	if !slices.Equal(got, want) {
-		t.Fatalf("premounted live-unload agenda\n got: %v\nwant: %v", got, want)
+		t.Fatalf("premounted live-unload tasks\n got: %v\nwant: %v", got, want)
 	}
 }
 
-// The pickup item must carry the container marking and its ramp; chassis
-// acquire/return items carry no facility (rdt: those specs omit facility_id).
+// The pickup task must carry the container marking and its ramp; chassis
+// acquire/return tasks carry no facility (rdt: those specs omit facility_id).
 func TestLiveLoad_PickupCarriesContainerAndFacility(t *testing.T) {
 	pickupRamp := NewFacilityID()
 	container := mustContainer(t, "MSKU9")
@@ -119,11 +119,11 @@ func TestLiveLoad_PickupCarriesContainerAndFacility(t *testing.T) {
 		ContainerDropoffRamp: NewFacilityID(),
 		DockDoor:             NewFacilityID(),
 	}
-	specs := plan.ToAgendaSpec()
+	specs := plan.ToTasksSpec()
 
 	acquire := specs[0]
 	if acquire.Action != ActionAcquireChassis {
-		t.Fatalf("expected first item to be acquire chassis, got %v", acquire.Action)
+		t.Fatalf("expected first task to be acquire chassis, got %v", acquire.Action)
 	}
 	if acquire.Facility != nil {
 		t.Fatal("acquire chassis must have no facility")

@@ -125,7 +125,7 @@ WHERE id = $1`, pgtype.UUID{Bytes: id, Valid: true}).
 	}
 
 	var loadErr error
-	if detail.AgendaItems, loadErr = q.agendaItemViews(ctx, id); loadErr != nil {
+	if detail.Tasks, loadErr = q.taskViews(ctx, id); loadErr != nil {
 		return nil, loadErr
 	}
 	if detail.Assignments, loadErr = q.assignmentViews(ctx, id); loadErr != nil {
@@ -142,34 +142,34 @@ WHERE id = $1`, pgtype.UUID{Bytes: id, Valid: true}).
 
 // --- child projections ---------------------------------------------------- //
 
-func (q *DispatchQueryService) agendaItemViews(ctx context.Context, id uuid.UUID) ([]application.AgendaItemView, error) {
+func (q *DispatchQueryService) taskViews(ctx context.Context, id uuid.UUID) ([]application.TaskView, error) {
 	rows, err := q.db.Query(ctx, `
-SELECT id, item_no, action, facility_id, status, attributed_driver, attributed_truck, created_at, updated_at
-FROM operations.intermodal_dispatch_agenda_items
+SELECT id, task_no, action, facility_id, status, attributed_driver, attributed_truck, created_at, updated_at
+FROM operations.intermodal_dispatch_tasks
 WHERE dispatch_id = $1
-ORDER BY item_no`, pgtype.UUID{Bytes: id, Valid: true})
+ORDER BY task_no`, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
-		return nil, fmt.Errorf("operations: list agenda items: %w", err)
+		return nil, fmt.Errorf("operations: list tasks: %w", err)
 	}
 	defer rows.Close()
 
-	var out []application.AgendaItemView
+	var out []application.TaskView
 	for rows.Next() {
 		var (
-			itemID, facility, driver, truck pgtype.UUID
-			itemNo                          int32
+			taskID, facility, driver, truck pgtype.UUID
+			taskNo                          int32
 			action, status                  string
 			createdAt, updatedAt            pgtype.Timestamptz
 		)
-		if err := rows.Scan(&itemID, &itemNo, &action, &facility, &status, &driver, &truck, &createdAt, &updatedAt); err != nil {
-			return nil, fmt.Errorf("operations: scan agenda item view: %w", err)
+		if err := rows.Scan(&taskID, &taskNo, &action, &facility, &status, &driver, &truck, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("operations: scan task view: %w", err)
 		}
-		out = append(out, application.AgendaItemView{
-			ID:               uuid.UUID(itemID.Bytes),
-			ItemNo:           int(itemNo),
+		out = append(out, application.TaskView{
+			ID:               uuid.UUID(taskID.Bytes),
+			No:               int(taskNo),
 			Action:           intermodal.Action(action),
 			FacilityID:       optUUID(facility),
-			Status:           intermodal.AgendaItemStatus(status),
+			Status:           intermodal.TaskStatus(status),
 			AttributedDriver: optUUID(driver),
 			AttributedTruck:  optUUID(truck),
 			CreatedAt:        createdAt.Time,

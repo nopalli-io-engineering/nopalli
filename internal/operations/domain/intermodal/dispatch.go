@@ -5,7 +5,7 @@ import (
 )
 
 // This file ports the Dispatch aggregate (rdt: root.py): the aggregate root,
-// its child entities (AgendaItem, Assignment, the two custody-episode types),
+// its child entities (Task, Assignment, the two custody-episode types),
 // and the factory that queues a dispatch from a move plan.
 //
 // Optionality note: method parameters use pointers for optional ids (the
@@ -98,73 +98,60 @@ type Assignment struct {
 	status   AssignmentStatus
 }
 
-// ID returns the assignment id.
 func (a *Assignment) ID() AssignmentID { return a.id }
 
-// Status returns the assignment status.
 func (a *Assignment) Status() AssignmentStatus { return a.status }
 
-// IsActive reports whether this assignment is the active one.
 func (a *Assignment) IsActive() bool { return a.status == AssignmentActive }
 
 func (a *Assignment) activate() { a.status = AssignmentActive }
+
 func (a *Assignment) conclude() { a.status = AssignmentConcluded }
 
-// assignee returns this assignment as an Assignee value object.
 func (a *Assignment) assignee() Assignee { return Assignee{Driver: a.driverID, Truck: a.truckID} }
 
-// itemDetails is the per-item data an agenda item carries (rdt: AgendaItem's
-// details dict, keyed "container_number").
-type itemDetails struct {
+// taskDetails is the per-task data an task carries
+type taskDetails struct {
 	container ContainerNumber // zero when the action carries no container
 }
 
-// AgendaItem is one ordered step of a dispatch's agenda (rdt: AgendaItem).
-type AgendaItem struct {
-	id               AgendaItemID
-	itemNo           int
+type Task struct {
+	id               TaskID
+	no               int
 	action           Action
 	facilityID       *FacilityID
-	status           AgendaItemStatus
-	details          itemDetails
+	status           TaskStatus
+	details          taskDetails
 	attributedDriver DriverID // zero until executed
 	attributedTruck  TruckID  // zero until executed
 }
 
-// ID returns the agenda item id.
-func (i *AgendaItem) ID() AgendaItemID { return i.id }
+func (t *Task) ID() TaskID { return t.id }
 
-// ItemNo returns the 1-based position of this item in the agenda.
-func (i *AgendaItem) ItemNo() int { return i.itemNo }
+func (t *Task) No() int { return t.no }
 
-// Action returns the action this item calls for.
-func (i *AgendaItem) Action() Action { return i.action }
+func (t *Task) Action() Action { return t.action }
 
-// FacilityID returns the facility the action happens at, if any.
-func (i *AgendaItem) FacilityID() *FacilityID { return i.facilityID }
+func (t *Task) FacilityID() *FacilityID { return t.facilityID }
 
-// Status returns the item status.
-func (i *AgendaItem) Status() AgendaItemStatus { return i.status }
+func (t *Task) Status() TaskStatus { return t.status }
 
-// AttributedDriver returns the driver who executed the item (zero if pending).
-func (i *AgendaItem) AttributedDriver() DriverID { return i.attributedDriver }
+func (t *Task) AttributedDriver() DriverID { return t.attributedDriver }
 
-// AttributedTruck returns the truck used to execute the item (zero if pending).
-func (i *AgendaItem) AttributedTruck() TruckID { return i.attributedTruck }
+func (t *Task) AttributedTruck() TruckID { return t.attributedTruck }
 
-// IsCompleted reports whether the item has been executed.
-func (i *AgendaItem) IsCompleted() bool { return i.status == AgendaItemCompleted }
+func (t *Task) IsCompleted() bool { return t.status == TaskCompleted }
 
-func (i *AgendaItem) execute(byDriver DriverID, withTruck TruckID) {
-	i.attributedDriver = byDriver
-	i.attributedTruck = withTruck
-	i.status = AgendaItemCompleted
+func (t *Task) execute(byDriver DriverID, withTruck TruckID) {
+	t.attributedDriver = byDriver
+	t.attributedTruck = withTruck
+	t.status = TaskCompleted
 }
 
 // --- aggregate root ------------------------------------------------------- //
 
 // Dispatch is the intermodal drayage move aggregate (rdt: Dispatch). It is a
-// sequential state machine over an agenda; see root.py for the lifecycle.
+// sequential state machine
 type Dispatch struct {
 	domain.Root
 
@@ -172,14 +159,14 @@ type Dispatch struct {
 	sourceQuoteID       SourceQuoteID // zero when there is no source quote
 	dispatcherID        *DispatcherID
 	planType            PlanType
-	agendaItems         []*AgendaItem
+	tasks               []*Task
 	chassisEpisodes     []*ChassisCustodyEpisode
 	containerEpisodes   []*ContainerCustodyEpisode
 	assignments         []*Assignment
 	currentAssignmentID *AssignmentID
 	status              Status
-	// cursor counts executed agenda items (0 = none executed yet); the next
-	// item to run is agendaItems[cursor]. Replaces rdt's nullable _item_cursor.
+	// cursor counts executed tasks (0 = none executed yet); the next
+	// task to run is tasks[cursor]. Replaces rdt's nullable _item_cursor.
 	cursor int
 	// version is optimistic-concurrency bookkeeping for the data mapper (rdt:
 	// the version_id_col on the imperative mapping). It is not domain state:
@@ -316,11 +303,10 @@ func (d *Dispatch) AssignmentsWithStatus(s AssignmentStatus) []*Assignment {
 	return out
 }
 
-// AgendaItem finds an agenda item by id, or nil.
-func (d *Dispatch) AgendaItem(id AgendaItemID) *AgendaItem {
-	for _, i := range d.agendaItems {
-		if i.id == id {
-			return i
+func (d *Dispatch) Task(id TaskID) *Task {
+	for _, t := range d.tasks {
+		if t.id == id {
+			return t
 		}
 	}
 	return nil
@@ -417,7 +403,7 @@ func (d *Dispatch) Approve() error {
 	return nil
 }
 
-// Start activates the assignment and begins agenda execution (rdt: start).
+// Start activates the assignment and begins task execution.
 func (d *Dispatch) Start() error {
 	if d.status != StatusReady {
 		return ErrDispatchNotReady
@@ -441,32 +427,32 @@ func (d *Dispatch) Verify() error {
 	return nil
 }
 
-// --- agenda execution commands -------------------------------------------- //
+// --- Task execution commands -------------------------------------------- //
 
 // Hold executes the current hold step (rdt: hold).
-func (d *Dispatch) Hold() (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(holdActions)
+func (d *Dispatch) Hold() (TaskID, error) {
+	task, err := d.executeTask(holdActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
-	if item.action == ActionHoldForLoading {
+	if task.action == ActionHoldForLoading {
 		d.RecordEvents(DispatchHeldForLoading{
-			DispatchID: d.id, FacilityID: deref(item.facilityID),
+			DispatchID: d.id, FacilityID: deref(task.facilityID),
 		})
 	} else {
 		d.RecordEvents(DispatchHeldForEmptying{
-			DispatchID: d.id, FacilityID: deref(item.facilityID),
+			DispatchID: d.id, FacilityID: deref(task.facilityID),
 		})
 	}
-	return item.id, nil
+	return task.id, nil
 }
 
 // AcquireChassis executes the acquire-chassis step, opening a chassis custody
 // episode (rdt: acquire_chassis).
-func (d *Dispatch) AcquireChassis(facilityID FacilityID, chassisNumber ChassisNumber) (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(acquireChassisActions)
+func (d *Dispatch) AcquireChassis(facilityID FacilityID, chassisNumber ChassisNumber) (TaskID, error) {
+	task, err := d.executeTask(acquireChassisActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
 	d.chassisEpisodes = append(d.chassisEpisodes, &ChassisCustodyEpisode{
 		id:            NewChassisCustodyEpisodeID(),
@@ -477,15 +463,15 @@ func (d *Dispatch) AcquireChassis(facilityID FacilityID, chassisNumber ChassisNu
 	d.RecordEvents(ChassisAcquired{
 		DispatchID: d.id, FacilityID: facilityID, ChassisNumber: chassisNumber,
 	})
-	return item.id, nil
+	return task.id, nil
 }
 
 // ReturnChassis executes the return-chassis step, closing custody and the
 // dispatch (rdt: return_chassis).
-func (d *Dispatch) ReturnChassis(facilityID FacilityID) (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(returnChassisActions)
+func (d *Dispatch) ReturnChassis(facilityID FacilityID) (TaskID, error) {
+	task, err := d.executeTask(returnChassisActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
 	eq, _ := d.LiveEquipment()
 	chassisNumber := eq.Chassis
@@ -497,138 +483,138 @@ func (d *Dispatch) ReturnChassis(facilityID FacilityID) (AgendaItemID, error) {
 		ChassisReturned{DispatchID: d.id, FacilityID: facilityID, ChassisNumber: chassisNumber},
 		DispatchCompleted{DispatchID: d.id, SourceQuoteID: d.sourceQuoteID},
 	)
-	return item.id, nil
+	return task.id, nil
 }
 
 // PickUpContainer executes the pick-up-container step, opening container
 // custody (rdt: pick_up_container).
-func (d *Dispatch) PickUpContainer() (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(pickupContainerActions)
+func (d *Dispatch) PickUpContainer() (TaskID, error) {
+	task, err := d.executeTask(pickupContainerActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
-	if episode := d.ContainerEpisode(item.details.container); episode != nil {
+	if episode := d.ContainerEpisode(task.details.container); episode != nil {
 		episode.open()
 	}
 	eq, _ := d.LiveEquipment()
-	if item.action == ActionPickUpLoadedContainer {
+	if task.action == ActionPickUpLoadedContainer {
 		d.RecordEvents(LoadedContainerPickedUp{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: eq.Container,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerPickedUp{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: eq.Container,
 		})
 	}
-	return item.id, nil
+	return task.id, nil
 }
 
 // PickUpPremountedContainer executes the pick-up-premounted step, opening
 // container custody and a chassis episode together (rdt:
 // pick_up_premounted_container).
-func (d *Dispatch) PickUpPremountedContainer(chassisNumber ChassisNumber) (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(pickupPremountedActions)
+func (d *Dispatch) PickUpPremountedContainer(chassisNumber ChassisNumber) (TaskID, error) {
+	task, err := d.executeTask(pickupPremountedActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
-	containerNumber := item.details.container
+	containerNumber := task.details.container
 	if episode := d.ContainerEpisode(containerNumber); episode != nil {
 		episode.open()
 	}
 	d.chassisEpisodes = append(d.chassisEpisodes, &ChassisCustodyEpisode{
 		id:            NewChassisCustodyEpisodeID(),
-		sourcedFrom:   deref(item.facilityID),
+		sourcedFrom:   deref(task.facilityID),
 		chassisNumber: chassisNumber,
 		status:        CustodyOpened,
 	})
 	var pickup domain.DomainEvent
-	if item.action == ActionPickUpLoadedPremountedContainer {
+	if task.action == ActionPickUpLoadedPremountedContainer {
 		pickup = LoadedContainerPickedUp{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,
 		}
 	} else {
 		pickup = EmptyContainerPickedUp{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,
 		}
 	}
 	d.RecordEvents(
-		ChassisAcquired{DispatchID: d.id, FacilityID: deref(item.facilityID), ChassisNumber: chassisNumber},
+		ChassisAcquired{DispatchID: d.id, FacilityID: deref(task.facilityID), ChassisNumber: chassisNumber},
 		pickup,
 	)
-	return item.id, nil
+	return task.id, nil
 }
 
 // DeliverContainer executes the deliver-container step (rdt: deliver_container).
-func (d *Dispatch) DeliverContainer() (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(deliverContainerActions)
+func (d *Dispatch) DeliverContainer() (TaskID, error) {
+	task, err := d.executeTask(deliverContainerActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
 	eq, _ := d.LiveEquipment()
-	if item.action == ActionDeliverLoadedContainer {
+	if task.action == ActionDeliverLoadedContainer {
 		d.RecordEvents(LoadedContainerDelivered{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: eq.Container,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerDelivered{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: eq.Container,
 		})
 	}
-	return item.id, nil
+	return task.id, nil
 }
 
 // TakeContainer executes the take-container step, releasing the hold (rdt:
 // take_container).
-func (d *Dispatch) TakeContainer() (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(takeContainerActions)
+func (d *Dispatch) TakeContainer() (TaskID, error) {
+	task, err := d.executeTask(takeContainerActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
 	eq, _ := d.LiveEquipment()
-	if item.action == ActionTakeLoadedContainer {
+	if task.action == ActionTakeLoadedContainer {
 		d.RecordEvents(LoadedContainerTaken{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: eq.Container,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerTaken{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: eq.Container,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: eq.Container,
 		})
 	}
-	d.RecordEvents(DispatchReleased{DispatchID: d.id, FacilityID: deref(item.facilityID)})
-	return item.id, nil
+	d.RecordEvents(DispatchReleased{DispatchID: d.id, FacilityID: deref(task.facilityID)})
+	return task.id, nil
 }
 
 // DropContainer executes the drop-container step, closing container custody
 // (rdt: drop_container).
-func (d *Dispatch) DropContainer() (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(dropContainerActions)
+func (d *Dispatch) DropContainer() (TaskID, error) {
+	task, err := d.executeTask(dropContainerActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
 	eq, _ := d.LiveEquipment()
 	containerNumber := eq.Container
-	if item.action == ActionDropLoadedContainer {
+	if task.action == ActionDropLoadedContainer {
 		d.RecordEvents(LoadedContainerDropped{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,
 		})
 	} else {
 		d.RecordEvents(EmptyContainerDropped{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,
 		})
 	}
 	if episode := d.ContainerEpisode(containerNumber); episode != nil {
 		episode.close()
 	}
-	return item.id, nil
+	return task.id, nil
 }
 
 // DropPremountedContainer executes the drop-premounted step, closing both
 // custody episodes and concluding the assignment (rdt:
 // drop_premounted_container).
-func (d *Dispatch) DropPremountedContainer() (AgendaItemID, error) {
-	item, err := d.executeAgendaItem(dropPremountedActions)
+func (d *Dispatch) DropPremountedContainer() (TaskID, error) {
+	task, err := d.executeTask(dropPremountedActions)
 	if err != nil {
-		return AgendaItemID{}, err
+		return TaskID{}, err
 	}
 	d.currentAssignment().conclude()
 	eq, _ := d.LiveEquipment()
@@ -640,57 +626,57 @@ func (d *Dispatch) DropPremountedContainer() (AgendaItemID, error) {
 		episode.close()
 	}
 	var deliver domain.DomainEvent
-	if item.action == ActionDropEmptyPremountedContainer {
+	if task.action == ActionDropEmptyPremountedContainer {
 		deliver = EmptyContainerDropped{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,
 		}
 	} else {
 		deliver = LoadedContainerDropped{
-			DispatchID: d.id, FacilityID: deref(item.facilityID), ContainerNumber: containerNumber,
+			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,
 		}
 	}
 	d.RecordEvents(
-		ChassisReturned{DispatchID: d.id, FacilityID: deref(item.facilityID), ChassisNumber: chassisNumber},
+		ChassisReturned{DispatchID: d.id, FacilityID: deref(task.facilityID), ChassisNumber: chassisNumber},
 		deliver,
 	)
-	if d.agendaCompleted() {
+	if d.tasksCompleted() {
 		d.RecordEvents(DispatchCompleted{DispatchID: d.id, SourceQuoteID: d.sourceQuoteID})
 	}
-	return item.id, nil
+	return task.id, nil
 }
 
-// --- agenda cursor -------------------------------------------------------- //
+// --- Task cursor -------------------------------------------------------- //
 
-func (d *Dispatch) executeAgendaItem(allowed map[Action]bool) (*AgendaItem, error) {
+func (d *Dispatch) executeTask(allowed map[Action]bool) (*Task, error) {
 	if err := d.checkNextAction(allowed); err != nil {
 		return nil, err
 	}
 	d.cursor++
-	if d.agendaCompleted() {
+	if d.tasksCompleted() {
 		d.status = StatusCompleted
 	}
-	item := d.agendaItems[d.cursor-1]
+	task := d.tasks[d.cursor-1]
 	assignee, _ := d.LiveAssignee()
-	item.execute(assignee.Driver, assignee.Truck)
-	return item, nil
+	task.execute(assignee.Driver, assignee.Truck)
+	return task, nil
 }
 
-func (d *Dispatch) nextAgendaItem() *AgendaItem {
-	if d.agendaCompleted() {
+func (d *Dispatch) nextTask() *Task {
+	if d.tasksCompleted() {
 		return nil
 	}
-	return d.agendaItems[d.cursor]
+	return d.tasks[d.cursor]
 }
 
-func (d *Dispatch) agendaCompleted() bool {
-	return d.cursor == len(d.agendaItems)
+func (d *Dispatch) tasksCompleted() bool {
+	return d.cursor == len(d.tasks)
 }
 
 func (d *Dispatch) checkNextAction(allowed map[Action]bool) error {
 	if d.status != StatusInProgress {
 		return ErrDispatchNotInProgress
 	}
-	next := d.nextAgendaItem()
+	next := d.nextTask()
 	if next == nil || !allowed[next.action] {
 		var expected Action
 		if next != nil {
@@ -706,25 +692,24 @@ func (d *Dispatch) checkNextAction(allowed map[Action]bool) error {
 // Queue builds and queues a dispatch from a move plan (rdt: DispatchFactory.
 // queue). sourceQuoteID is optional.
 func Queue(sourceQuoteID *SourceQuoteID, move MovePlan) *Dispatch {
-	return QueueFromSpecs(sourceQuoteID, move.ToAgendaSpec(), move.PlanType())
+	return QueueFromSpecs(sourceQuoteID, move.ToTasksSpec(), move.PlanType())
 }
 
-// QueueFromSpecs builds and queues a dispatch directly from an agenda spec
-// (rdt: DispatchFactory.queue_from_specs).
-func QueueFromSpecs(sourceQuoteID *SourceQuoteID, specs []AgendaItemSpec, planType PlanType) *Dispatch {
-	items := make([]*AgendaItem, 0, len(specs))
+// QueueFromSpecs builds and queues a dispatch directly from an task spec
+func QueueFromSpecs(sourceQuoteID *SourceQuoteID, specs []TaskSpec, planType PlanType) *Dispatch {
+	tasks := make([]*Task, 0, len(specs))
 	var containerEpisodes []*ContainerCustodyEpisode
 	for i, s := range specs {
-		var details itemDetails
+		var details taskDetails
 		if s.Details != nil && s.Details.Container != nil {
 			details.container = *s.Details.Container
 		}
-		items = append(items, &AgendaItem{
-			id:         NewAgendaItemID(),
-			itemNo:     i + 1,
+		tasks = append(tasks, &Task{
+			id:         NewTaskID(),
+			no:         i + 1,
 			facilityID: s.Facility,
 			action:     s.Action,
-			status:     AgendaItemPending,
+			status:     TaskPending,
 			details:    details,
 		})
 		if s.Details != nil && s.Details.Container != nil {
@@ -744,7 +729,7 @@ func QueueFromSpecs(sourceQuoteID *SourceQuoteID, specs []AgendaItemSpec, planTy
 		id:                NewDispatchID(),
 		sourceQuoteID:     derefSourceQuote(sourceQuoteID),
 		planType:          planType,
-		agendaItems:       items,
+		tasks:             tasks,
 		containerEpisodes: containerEpisodes,
 		status:            StatusQueued,
 	}

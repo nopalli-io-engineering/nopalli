@@ -57,21 +57,21 @@ func (tr *eventTracker) since() []domain.RecordedEvent {
 	return fresh
 }
 
-// assertAgendaItemCompletedBy mirrors assert_agenda_item_completion_by_assignee.
-func assertAgendaItemCompletedBy(t *testing.T, d *Dispatch, id AgendaItemID, by Assignee) {
+// assertTaskCompletedBy mirrors assert_task_completion_by_assignee.
+func assertTaskCompletedBy(t *testing.T, d *Dispatch, id TaskID, by Assignee) {
 	t.Helper()
-	item := d.AgendaItem(id)
-	if item == nil {
-		t.Fatalf("agenda item %v not found", id)
+	task := d.Task(id)
+	if task == nil {
+		t.Fatalf("task %v not found", id)
 	}
-	if item.Status() != AgendaItemCompleted {
-		t.Fatalf("agenda item status = %v, want completed", item.Status())
+	if task.Status() != TaskCompleted {
+		t.Fatalf("task status = %v, want completed", task.Status())
 	}
-	if item.AttributedDriver() != by.Driver {
-		t.Fatalf("attributed driver = %v, want %v", item.AttributedDriver(), by.Driver)
+	if task.AttributedDriver() != by.Driver {
+		t.Fatalf("attributed driver = %v, want %v", task.AttributedDriver(), by.Driver)
 	}
-	if item.AttributedTruck() != by.Truck {
-		t.Fatalf("attributed truck = %v, want %v", item.AttributedTruck(), by.Truck)
+	if task.AttributedTruck() != by.Truck {
+		t.Fatalf("attributed truck = %v, want %v", task.AttributedTruck(), by.Truck)
 	}
 }
 

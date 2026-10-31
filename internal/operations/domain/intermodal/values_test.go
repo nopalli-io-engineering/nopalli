@@ -51,7 +51,7 @@ func TestEnumValidity(t *testing.T) {
 	valid := []interface{ Valid() bool }{
 		StatusInProgress, PlanLiveLoad, ActionAcquireChassis,
 		AssignmentActive, CustodyOpened, ChassisCloseReturned,
-		ContainerCloseStreetTurned, AgendaItemCompleted,
+		ContainerCloseStreetTurned, TaskCompleted,
 	}
 	for _, v := range valid {
 		if !v.Valid() {
@@ -62,7 +62,7 @@ func TestEnumValidity(t *testing.T) {
 	invalid := []interface{ Valid() bool }{
 		Status("bogus"), PlanType("bogus"), Action("bogus"),
 		AssignmentStatus("bogus"), CustodyEpisodeStatus("bogus"),
-		ChassisClose("bogus"), ContainerClose("bogus"), AgendaItemStatus("bogus"),
+		ChassisClose("bogus"), ContainerClose("bogus"), TaskStatus("bogus"),
 	}
 	for _, v := range invalid {
 		if v.Valid() {

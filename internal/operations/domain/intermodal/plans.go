@@ -10,15 +10,15 @@ package intermodal
 // will execute (rdt: MovePlan protocol).
 type MovePlan interface {
 	PlanType() PlanType
-	ToAgendaSpec() []AgendaItemSpec
+	ToTasksSpec() []TaskSpec
 }
 
 // facilityAt returns a pointer to a copy of f, for the optional Facility field.
 func facilityAt(f FacilityID) *FacilityID { return &f }
 
 // containerDetails returns item details carrying a copy of c.
-func containerDetails(c ContainerNumber) *AgendaItemDetails {
-	return &AgendaItemDetails{Container: &c}
+func containerDetails(c ContainerNumber) *TaskDetails {
+	return &TaskDetails{Container: &c}
 }
 
 // LiveLoad: pick up an empty container, deliver it to a dock door to be loaded,
@@ -39,8 +39,8 @@ func (p LiveLoad) PlanType() PlanType { return PlanLiveLoad }
 // ToAgendaSpec expands the plan into its ordered agenda: set-up, then the core
 // deliver/hold/take at the dock, then wrap-up. Order and actions mirror rdt
 // exactly so the two apps plan identical agendas.
-func (p LiveLoad) ToAgendaSpec() []AgendaItemSpec {
-	setUp := []AgendaItemSpec{
+func (p LiveLoad) ToTasksSpec() []TaskSpec {
+	setUp := []TaskSpec{
 		{Action: ActionAcquireChassis},
 		{
 			Action:   ActionPickUpEmptyContainer,
@@ -48,24 +48,24 @@ func (p LiveLoad) ToAgendaSpec() []AgendaItemSpec {
 			Details:  containerDetails(p.ContainerNumber),
 		},
 	}
-	core := []AgendaItemSpec{
+	core := []TaskSpec{
 		{Action: ActionDeliverEmptyContainer, Facility: facilityAt(p.DockDoor)},
 		{Action: ActionHoldForLoading, Facility: facilityAt(p.DockDoor)},
 		{Action: ActionTakeLoadedContainer, Facility: facilityAt(p.DockDoor)},
 	}
-	wrapUp := []AgendaItemSpec{
+	wrapUp := []TaskSpec{
 		{Action: ActionDropLoadedContainer, Facility: facilityAt(p.ContainerDropoffRamp)},
 		{Action: ActionReturnChassis},
 	}
 	if p.Premounted {
-		setUp = []AgendaItemSpec{
+		setUp = []TaskSpec{
 			{
 				Action:   ActionPickUpEmptyPremountedContainer,
 				Facility: facilityAt(p.ContainerPickupRamp),
 				Details:  containerDetails(p.ContainerNumber),
 			},
 		}
-		wrapUp = []AgendaItemSpec{
+		wrapUp = []TaskSpec{
 			{Action: ActionDropLoadedPremountedContainer, Facility: facilityAt(p.ContainerDropoffRamp)},
 		}
 	}
@@ -88,8 +88,8 @@ type LiveUnload struct {
 func (p LiveUnload) PlanType() PlanType { return PlanLiveUnload }
 
 // ToAgendaSpec expands the plan into its ordered agenda, mirroring rdt.
-func (p LiveUnload) ToAgendaSpec() []AgendaItemSpec {
-	setUp := []AgendaItemSpec{
+func (p LiveUnload) ToTasksSpec() []TaskSpec {
+	setUp := []TaskSpec{
 		{Action: ActionAcquireChassis},
 		{
 			Action:   ActionPickUpLoadedContainer,
@@ -97,24 +97,24 @@ func (p LiveUnload) ToAgendaSpec() []AgendaItemSpec {
 			Details:  containerDetails(p.ContainerNumber),
 		},
 	}
-	core := []AgendaItemSpec{
+	core := []TaskSpec{
 		{Action: ActionDeliverLoadedContainer, Facility: facilityAt(p.DockDoor)},
 		{Action: ActionHoldForEmptying, Facility: facilityAt(p.DockDoor)},
 		{Action: ActionTakeEmptyContainer, Facility: facilityAt(p.DockDoor)},
 	}
-	wrapUp := []AgendaItemSpec{
+	wrapUp := []TaskSpec{
 		{Action: ActionDropEmptyContainer, Facility: facilityAt(p.ContainerDropoffRamp)},
 		{Action: ActionReturnChassis},
 	}
 	if p.Premounted {
-		setUp = []AgendaItemSpec{
+		setUp = []TaskSpec{
 			{
 				Action:   ActionPickUpLoadedPremountedContainer,
 				Facility: facilityAt(p.ContainerPickupRamp),
 				Details:  containerDetails(p.ContainerNumber),
 			},
 		}
-		wrapUp = []AgendaItemSpec{
+		wrapUp = []TaskSpec{
 			{Action: ActionDropEmptyPremountedContainer, Facility: facilityAt(p.ContainerDropoffRamp)},
 		}
 	}
@@ -122,12 +122,12 @@ func (p LiveUnload) ToAgendaSpec() []AgendaItemSpec {
 }
 
 // concat flattens agenda segments into a single ordered slice.
-func concat(segments ...[]AgendaItemSpec) []AgendaItemSpec {
+func concat(segments ...[]TaskSpec) []TaskSpec {
 	var n int
 	for _, s := range segments {
 		n += len(s)
 	}
-	out := make([]AgendaItemSpec, 0, n)
+	out := make([]TaskSpec, 0, n)
 	for _, s := range segments {
 		out = append(out, s...)
 	}

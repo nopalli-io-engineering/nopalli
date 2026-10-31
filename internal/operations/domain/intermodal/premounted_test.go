@@ -87,7 +87,7 @@ func TestPremountedLoad_PickUp(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireEquipment(t, f.d, pmFull)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "ChassisAcquired", "EmptyContainerPickedUp")
 	acq := oneEvent[ChassisAcquired](t, ev)
@@ -110,7 +110,7 @@ func TestPremountedLoad_DropClosesAllCustody(t *testing.T) {
 	requireNoEquipment(t, f.d)
 	requireNoLiveAssignee(t, f.d)
 	requireNoAssignee(t, f.d)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "ChassisReturned", "LoadedContainerDropped", "DispatchCompleted")
 	ret := oneEvent[ChassisReturned](t, ev)
@@ -136,7 +136,7 @@ func TestPremountedUnload_PickUp(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireEquipment(t, f.d, pmFull)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "ChassisAcquired", "LoadedContainerPickedUp")
 	if oneEvent[ChassisAcquired](t, ev).ChassisNumber != chassis {
@@ -156,7 +156,7 @@ func TestPremountedUnload_DropClosesAllCustody(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireNoEquipment(t, f.d)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "ChassisReturned", "EmptyContainerDropped", "DispatchCompleted")
 	ret := oneEvent[ChassisReturned](t, ev)

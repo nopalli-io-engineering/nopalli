@@ -35,20 +35,20 @@ type DispatchDetail struct {
 	Status            intermodal.Status
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	AgendaItems       []AgendaItemView
+	Tasks             []TaskView
 	Assignments       []AssignmentView
 	ChassisEpisodes   []ChassisEpisodeView
 	ContainerEpisodes []ContainerEpisodeView
 }
 
-// AgendaItemView is the read projection of one agenda row. The details JSON
+// TaskView is the read projection of one task row. The details JSON
 // (container number) is not projected here; add it if a view needs it.
-type AgendaItemView struct {
+type TaskView struct {
 	ID               uuid.UUID
-	ItemNo           int
+	No               int
 	Action           intermodal.Action
 	FacilityID       *uuid.UUID
-	Status           intermodal.AgendaItemStatus
+	Status           intermodal.TaskStatus
 	AttributedDriver *uuid.UUID
 	AttributedTruck  *uuid.UUID
 	CreatedAt        time.Time

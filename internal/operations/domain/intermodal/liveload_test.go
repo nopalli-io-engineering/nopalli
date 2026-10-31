@@ -129,7 +129,7 @@ func TestLiveLoad_AcquireChassis(t *testing.T) {
 
 	requireEquipment(t, f.d, partialEquipment)
 	requireLiveAssignee(t, f.d)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "ChassisAcquired")
 	acq := oneEvent[ChassisAcquired](t, ev)
@@ -146,7 +146,7 @@ func TestLiveLoad_PickUpContainer(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireEquipment(t, f.d, fullEquipment)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "EmptyContainerPickedUp")
 	picked := oneEvent[EmptyContainerPickedUp](t, ev)
@@ -163,7 +163,7 @@ func TestLiveLoad_DeliverContainer(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireEquipment(t, f.d, fullEquipment)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "EmptyContainerDelivered")
 	del := oneEvent[EmptyContainerDelivered](t, ev)
@@ -180,7 +180,7 @@ func TestLiveLoad_Hold(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireEquipment(t, f.d, fullEquipment)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "DispatchHeldForLoading")
 	held := oneEvent[DispatchHeldForLoading](t, ev)
@@ -197,7 +197,7 @@ func TestLiveLoad_TakeReleasesHold(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireEquipment(t, f.d, fullEquipment)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "LoadedContainerTaken", "DispatchReleased")
 	taken := oneEvent[LoadedContainerTaken](t, ev)
@@ -217,7 +217,7 @@ func TestLiveLoad_DropClosesCustody(t *testing.T) {
 	mustNoErr(t, err)
 
 	requireEquipment(t, f.d, partialEquipment) // chassis still open
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "LoadedContainerDropped")
 	ld := oneEvent[LoadedContainerDropped](t, ev)
@@ -239,7 +239,7 @@ func TestLiveLoad_ReturnChassisCompletes(t *testing.T) {
 	requireNoEquipment(t, f.d)
 	requireNoLiveAssignee(t, f.d)
 	requireNoAssignee(t, f.d)
-	assertAgendaItemCompletedBy(t, f.d, id, assignee())
+	assertTaskCompletedBy(t, f.d, id, assignee())
 	ev := track.since()
 	assertTypeNames(t, ev, "ChassisReturned", "DispatchCompleted")
 	ret := oneEvent[ChassisReturned](t, ev)

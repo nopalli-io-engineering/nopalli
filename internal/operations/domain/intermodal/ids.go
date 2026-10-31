@@ -38,8 +38,8 @@ type FacilityID struct{ domain.ID }
 // SourceQuoteID links a Dispatch back to the booking quote it originated from.
 type SourceQuoteID struct{ domain.ID }
 
-// AgendaItemID identifies one ordered step in a Dispatch's agenda.
-type AgendaItemID struct{ domain.ID }
+// Task ID identifies one ordered step in a Dispatch's agenda.
+type TaskID struct{ domain.ID }
 
 // ChassisCustodyEpisodeID identifies a chassis custody episode.
 type ChassisCustodyEpisodeID struct{ domain.ID }
@@ -54,7 +54,7 @@ func NewTruckID() TruckID             { return TruckID{domain.NewID()} }
 func NewAssignmentID() AssignmentID   { return AssignmentID{domain.NewID()} }
 func NewFacilityID() FacilityID       { return FacilityID{domain.NewID()} }
 func NewSourceQuoteID() SourceQuoteID { return SourceQuoteID{domain.NewID()} }
-func NewAgendaItemID() AgendaItemID   { return AgendaItemID{domain.NewID()} }
+func NewTaskID() TaskID               { return TaskID{domain.NewID()} }
 func NewChassisCustodyEpisodeID() ChassisCustodyEpisodeID {
 	return ChassisCustodyEpisodeID{domain.NewID()}
 }
@@ -97,9 +97,9 @@ func ParseSourceQuoteID(s string) (SourceQuoteID, error) {
 	return SourceQuoteID{id}, err
 }
 
-func ParseAgendaItemID(s string) (AgendaItemID, error) {
+func ParseTaskID(s string) (TaskID, error) {
 	id, err := domain.ParseID(s)
-	return AgendaItemID{id}, err
+	return TaskID{id}, err
 }
 
 func ParseChassisCustodyEpisodeID(s string) (ChassisCustodyEpisodeID, error) {
@@ -150,9 +150,9 @@ func SourceQuoteIDFromUUID(v uuid.UUID) (SourceQuoteID, error) {
 	return SourceQuoteID{id}, err
 }
 
-func AgendaItemIDFromUUID(v uuid.UUID) (AgendaItemID, error) {
+func AgendaItemIDFromUUID(v uuid.UUID) (TaskID, error) {
 	id, err := domain.FromUUID(v)
-	return AgendaItemID{id}, err
+	return TaskID{id}, err
 }
 
 func ChassisCustodyEpisodeIDFromUUID(v uuid.UUID) (ChassisCustodyEpisodeID, error) {

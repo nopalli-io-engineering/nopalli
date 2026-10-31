@@ -101,7 +101,7 @@ type Equipment struct {
 
 // AgendaItemDetails carries the per-item data an action may need — currently
 // just the container marking for container actions (rdt: AgendaItemDetails).
-type AgendaItemDetails struct {
+type TaskDetails struct {
 	Container *ContainerNumber
 }
 
@@ -109,10 +109,10 @@ type AgendaItemDetails struct {
 // becomes a live AgendaItem on a Dispatch (rdt: AgendaItemSpec). Facility is
 // nil for actions that have no location (acquire/return chassis); Details is
 // nil for actions that carry no container.
-type AgendaItemSpec struct {
+type TaskSpec struct {
 	Action   Action
 	Facility *FacilityID
-	Details  *AgendaItemDetails
+	Details  *TaskDetails
 }
 
 // --- enums (ported from rdt's value_objects.py as typed string constants) --- //
@@ -288,18 +288,18 @@ func (c ContainerClose) Valid() bool {
 
 // AgendaItemStatus is the lifecycle of a single agenda item (rdt:
 // AgendaItemStatus).
-type AgendaItemStatus string
+type TaskStatus string
 
 const (
-	AgendaItemPending   AgendaItemStatus = "pending"
-	AgendaItemCompleted AgendaItemStatus = "completed"
-	AgendaItemSkipped   AgendaItemStatus = "skipped"
+	TaskPending   TaskStatus = "pending"
+	TaskCompleted TaskStatus = "completed"
+	TaskSkipped   TaskStatus = "skipped"
 )
 
 // Valid reports whether s is a known agenda item status.
-func (s AgendaItemStatus) Valid() bool {
+func (s TaskStatus) Valid() bool {
 	switch s {
-	case AgendaItemPending, AgendaItemCompleted, AgendaItemSkipped:
+	case TaskPending, TaskCompleted, TaskSkipped:
 		return true
 	default:
 		return false

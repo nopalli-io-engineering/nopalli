@@ -72,7 +72,7 @@ func (r *DispatchRepository) Get(ctx context.Context, id intermodal.DispatchID) 
 	}
 
 	var loadErr error
-	if snap.AgendaItems, loadErr = r.loadAgendaItems(ctx, id); loadErr != nil {
+	if snap.Tasks, loadErr = r.loadTasks(ctx, id); loadErr != nil {
 		return nil, loadErr
 	}
 	if snap.Assignments, loadErr = r.loadAssignments(ctx, id); loadErr != nil {
@@ -167,10 +167,10 @@ func (r *DispatchRepository) Save(ctx context.Context, d *intermodal.Dispatch) e
 // not part of the snapshot, so it is written once on insert and left untouched
 // on update.
 func (r *DispatchRepository) writeChildren(ctx context.Context, s intermodal.DispatchSnapshot) error {
-	for _, i := range s.AgendaItems {
+	for _, i := range s.Tasks {
 		details, err := encodeDetails(i.Container)
 		if err != nil {
-			return fmt.Errorf("operations: encode agenda details: %w", err)
+			return fmt.Errorf("operations: encode task details: %w", err)
 		}
 		_, err = r.db.Exec(ctx, `
 INSERT INTO operations.intermodal_dispatch_agenda_items
@@ -181,11 +181,11 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status, details = EXCLUDED.details,
     attributed_driver = EXCLUDED.attributed_driver, attributed_truck = EXCLUDED.attributed_truck,
     updated_at = now()`,
-			pgID(i.ID), pgID(s.ID), int32(i.ItemNo), string(i.Action), pgIDOpt(i.FacilityID),
+			pgID(i.ID), pgID(s.ID), int32(i.No), string(i.Action), pgIDOpt(i.FacilityID),
 			string(i.Status), details, pgIDOpt(i.AttributedDriver), pgIDOpt(i.AttributedTruck),
 		)
 		if err != nil {
-			return fmt.Errorf("operations: upsert agenda item: %w", err)
+			return fmt.Errorf("operations: upsert tasks: %w", err)
 		}
 	}
 	for _, a := range s.Assignments {
@@ -263,8 +263,8 @@ func (r *DispatchRepository) deleteMissingChildren(ctx context.Context, s interm
 }
 
 func agendaItemIDs(s intermodal.DispatchSnapshot) []string {
-	ids := make([]string, 0, len(s.AgendaItems))
-	for _, i := range s.AgendaItems {
+	ids := make([]string, 0, len(s.Tasks))
+	for _, i := range s.Tasks {
 		ids = append(ids, i.ID.String())
 	}
 	return ids
@@ -296,7 +296,7 @@ func containerEpisodeIDs(s intermodal.DispatchSnapshot) []string {
 
 // --- child reads ---------------------------------------------------------- //
 
-func (r *DispatchRepository) loadAgendaItems(ctx context.Context, id intermodal.DispatchID) ([]intermodal.AgendaItemSnapshot, error) {
+func (r *DispatchRepository) loadTasks(ctx context.Context, id intermodal.DispatchID) ([]intermodal.TaskSnapshot, error) {
 	rows, err := r.db.Query(ctx, `
 SELECT id, item_no, action, facility_id, status, details, attributed_driver, attributed_truck
 FROM operations.intermodal_dispatch_agenda_items
@@ -307,7 +307,7 @@ ORDER BY item_no`, pgID(id))
 	}
 	defer rows.Close()
 
-	var out []intermodal.AgendaItemSnapshot
+	var out []intermodal.TaskSnapshot
 	for rows.Next() {
 		var (
 			itemID, facility, driver, truck pgtype.UUID
@@ -322,12 +322,12 @@ ORDER BY item_no`, pgID(id))
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, intermodal.AgendaItemSnapshot{
+		out = append(out, intermodal.TaskSnapshot{
 			ID:               mustAgendaItemID(itemID),
-			ItemNo:           int(itemNo),
+			No:               int(itemNo),
 			Action:           intermodal.Action(action),
 			FacilityID:       optFacility(facility),
-			Status:           intermodal.AgendaItemStatus(status),
+			Status:           intermodal.TaskStatus(status),
 			Container:        container,
 			AttributedDriver: optDriver(driver),
 			AttributedTruck:  optTruck(truck),
