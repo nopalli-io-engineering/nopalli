@@ -193,7 +193,7 @@ func (h *Handlers) Verify(w http.ResponseWriter, r *http.Request) {
 	h.command(w, r, h.svc.Verify)
 }
 
-// --- agenda execution ----------------------------------------------------- //
+// --- task execution ----------------------------------------------------- //
 
 // AcquireChassis handles POST /dispatches/{dispatchID}/chassis-acquisition.
 func (h *Handlers) AcquireChassis(w http.ResponseWriter, r *http.Request) {

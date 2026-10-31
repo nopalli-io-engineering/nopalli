@@ -17,7 +17,7 @@ import (
 
 // CreateDispatchRequest creates a dispatch from scratch (POST /dispatches). The
 // handler assembles the matching LiveLoad/LiveUnload from PlanType + these
-// fields; AD_HOC is rejected (no standard agenda to build).
+// fields; AD_HOC is rejected (no standard tasks to build).
 type CreateDispatchRequest struct {
 	PlanType             intermodal.PlanType `json:"plan_type"`
 	ContainerNumber      string              `json:"container_number"`
@@ -86,23 +86,23 @@ type DispatchDetailResponse struct {
 	Status            intermodal.Status          `json:"status"`
 	CreatedAt         time.Time                  `json:"created_at"`
 	UpdatedAt         time.Time                  `json:"updated_at"`
-	AgendaItems       []AgendaItemResponse       `json:"agenda_items"`
+	Tasks             []TaskResponse             `json:"tasks"`
 	Assignments       []AssignmentResponse       `json:"assignments"`
 	ChassisEpisodes   []ChassisEpisodeResponse   `json:"chassis_episodes"`
 	ContainerEpisodes []ContainerEpisodeResponse `json:"container_episodes"`
 }
 
-// AgendaItemResponse is the wire view of one agenda row.
-type AgendaItemResponse struct {
-	ID               string                      `json:"id"`
-	ItemNo           int                         `json:"item_no"`
-	Action           intermodal.Action           `json:"action"`
-	FacilityID       *string                     `json:"facility_id,omitempty"`
-	Status           intermodal.AgendaItemStatus `json:"status"`
-	AttributedDriver *string                     `json:"attributed_driver,omitempty"`
-	AttributedTruck  *string                     `json:"attributed_truck,omitempty"`
-	CreatedAt        time.Time                   `json:"created_at"`
-	UpdatedAt        time.Time                   `json:"updated_at"`
+// TaskResponse is the wire view of one task row.
+type TaskResponse struct {
+	ID               string                `json:"id"`
+	No               int                   `json:"no"`
+	Action           intermodal.Action     `json:"action"`
+	FacilityID       *string               `json:"facility_id,omitempty"`
+	Status           intermodal.TaskStatus `json:"status"`
+	AttributedDriver *string               `json:"attributed_driver,omitempty"`
+	AttributedTruck  *string               `json:"attributed_truck,omitempty"`
+	CreatedAt        time.Time             `json:"created_at"`
+	UpdatedAt        time.Time             `json:"updated_at"`
 }
 
 // AssignmentResponse is the wire view of one assignment row.
@@ -160,15 +160,15 @@ func newDispatchDetailResponse(d application.DispatchDetail) DispatchDetailRespo
 		Status:            d.Status,
 		CreatedAt:         d.CreatedAt,
 		UpdatedAt:         d.UpdatedAt,
-		AgendaItems:       make([]AgendaItemResponse, 0, len(d.AgendaItems)),
+		Tasks:             make([]TaskResponse, 0, len(d.Tasks)),
 		Assignments:       make([]AssignmentResponse, 0, len(d.Assignments)),
 		ChassisEpisodes:   make([]ChassisEpisodeResponse, 0, len(d.ChassisEpisodes)),
 		ContainerEpisodes: make([]ContainerEpisodeResponse, 0, len(d.ContainerEpisodes)),
 	}
-	for _, i := range d.AgendaItems {
-		resp.AgendaItems = append(resp.AgendaItems, AgendaItemResponse{
+	for _, i := range d.Tasks {
+		resp.Tasks = append(resp.Tasks, TaskResponse{
 			ID:               i.ID.String(),
-			ItemNo:           i.ItemNo,
+			No:               i.No,
 			Action:           i.Action,
 			FacilityID:       optUUIDString(i.FacilityID),
 			Status:           i.Status,

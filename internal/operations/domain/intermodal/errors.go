@@ -87,7 +87,7 @@ func NewDispatchNotFound(id DispatchID) *domain.Error {
 }
 
 // OutOfSequenceError is raised when the attempted execution action is not the
-// one the agenda cursor is currently at (rdt: DispatchActionOutOfSequence). It
+// one the task cursor is currently at (rdt: DispatchActionOutOfSequence). It
 // carries the Expected action so callers can tell the driver what to do next.
 // Match it with errors.As; it unwraps to its underlying *domain.Error.
 type OutOfSequenceError struct {

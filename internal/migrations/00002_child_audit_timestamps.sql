@@ -6,7 +6,7 @@
 -- created_at, bumping updated_at) and deletes only the rows the aggregate no
 -- longer owns.
 
-ALTER TABLE operations.intermodal_dispatch_agenda_items
+ALTER TABLE operations.intermodal_dispatch_tasks
     ADD COLUMN created_at timestamptz NOT NULL DEFAULT now(),
     ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 
@@ -29,5 +29,5 @@ ALTER TABLE operations.intermodal_dispatch_chassis_custody_episodes
     DROP COLUMN created_at, DROP COLUMN updated_at;
 ALTER TABLE operations.intermodal_dispatch_assignments
     DROP COLUMN created_at, DROP COLUMN updated_at;
-ALTER TABLE operations.intermodal_dispatch_agenda_items
+ALTER TABLE operations.intermodal_dispatch_tasks
     DROP COLUMN created_at, DROP COLUMN updated_at;

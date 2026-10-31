@@ -12,7 +12,7 @@ import (
 
 // Conversions between the aggregate's snapshot values and pgx's wire types.
 // Typed ids bind/scan as uuid (pgtype.UUID); the equipment-number value objects
-// and the agenda details map are encoded here, keeping the repository's SQL
+// and the task details map are encoded here, keeping the repository's SQL
 // free of marshalling noise.
 
 // identity is any typed id (all expose UUID via the embedded domain.ID).
@@ -32,7 +32,7 @@ func pgIDOpt[T identity](p *T) pgtype.UUID {
 }
 
 // cursorToDB maps the aggregate's cursor (0 = none executed) to the nullable
-// item_cursor column (NULL = none executed), matching rdt's column semantics.
+// task_cursor column (NULL = none executed), matching rdt's column semantics.
 func cursorToDB(c int) pgtype.Int4 {
 	if c == 0 {
 		return pgtype.Int4{}
@@ -104,8 +104,8 @@ func mustFacilityID(p pgtype.UUID) intermodal.FacilityID {
 	return id
 }
 
-func mustAgendaItemID(p pgtype.UUID) intermodal.AgendaItemID {
-	id, _ := intermodal.AgendaItemIDFromUUID(p.Bytes)
+func mustTaskID(p pgtype.UUID) intermodal.TaskID {
+	id, _ := intermodal.TaskIDFromUUID(p.Bytes)
 	return id
 }
 
@@ -144,8 +144,8 @@ func optChassis(t pgtype.Text) (*intermodal.ChassisNumber, error) {
 	return &c, nil
 }
 
-// encodeDetails serializes an agenda item's details map to JSONB. Keyed
-// "container_number" to match rdt's AgendaItemDetailsType vocabulary.
+// encodeDetails serializes an task's details map to JSONB. Keyed
+// "container_number" to match rdt's TaskDetailsType vocabulary.
 func encodeDetails(c *intermodal.ContainerNumber) ([]byte, error) {
 	m := map[string]string{}
 	if c != nil {
@@ -160,7 +160,7 @@ func decodeContainerFromDetails(raw []byte) (*intermodal.ContainerNumber, error)
 	}
 	var m map[string]string
 	if err := json.Unmarshal(raw, &m); err != nil {
-		return nil, fmt.Errorf("operations: decode agenda details: %w", err)
+		return nil, fmt.Errorf("operations: decode task details: %w", err)
 	}
 	s, ok := m["container_number"]
 	if !ok || s == "" {

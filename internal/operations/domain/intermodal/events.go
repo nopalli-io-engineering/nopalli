@@ -51,7 +51,7 @@ type DispatchVerified struct {
 
 func (e DispatchVerified) SubjectID() uuid.UUID { return e.DispatchID.UUID() }
 
-// DispatchStarted: the assigned driver began executing the agenda.
+// DispatchStarted: the assigned driver began executing the tasks.
 type DispatchStarted struct {
 	DispatchID DispatchID
 }
@@ -83,7 +83,7 @@ type DispatchReleased struct {
 
 func (e DispatchReleased) SubjectID() uuid.UUID { return e.DispatchID.UUID() }
 
-// DispatchCompleted: the final agenda item ran; the move is done.
+// DispatchCompleted: the final task ran; the move is done.
 type DispatchCompleted struct {
 	DispatchID    DispatchID
 	SourceQuoteID SourceQuoteID

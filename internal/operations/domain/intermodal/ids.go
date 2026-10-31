@@ -38,7 +38,7 @@ type FacilityID struct{ domain.ID }
 // SourceQuoteID links a Dispatch back to the booking quote it originated from.
 type SourceQuoteID struct{ domain.ID }
 
-// Task ID identifies one ordered step in a Dispatch's agenda.
+// Task ID identifies one ordered step in a Dispatch's tasks.
 type TaskID struct{ domain.ID }
 
 // ChassisCustodyEpisodeID identifies a chassis custody episode.
@@ -150,7 +150,7 @@ func SourceQuoteIDFromUUID(v uuid.UUID) (SourceQuoteID, error) {
 	return SourceQuoteID{id}, err
 }
 
-func AgendaItemIDFromUUID(v uuid.UUID) (TaskID, error) {
+func TaskIDFromUUID(v uuid.UUID) (TaskID, error) {
 	id, err := domain.FromUUID(v)
 	return TaskID{id}, err
 }

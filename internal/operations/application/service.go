@@ -147,7 +147,7 @@ func (s *IntermodalDispatchService) Approve(ctx context.Context, dispatchID inte
 	return s.mutate(ctx, permApprove, dispatchID, (*intermodal.Dispatch).Approve)
 }
 
-// Start begins agenda execution.
+// Start begins task execution.
 //
 // rdt consults the AssigneeAvailabilityPolicy here (rejecting a start when the
 // driver/truck is busy on another active dispatch). That check is intentionally
@@ -162,9 +162,9 @@ func (s *IntermodalDispatchService) Verify(ctx context.Context, dispatchID inter
 	return s.mutate(ctx, permVerify, dispatchID, (*intermodal.Dispatch).Verify)
 }
 
-// --- agenda execution ----------------------------------------------------- //
+// --- task execution ----------------------------------------------------- //
 //
-// Each drives the next agenda item; the aggregate enforces action order and
+// Each drives the next task; the aggregate enforces action order and
 // in-progress status, raising OutOfSequenceError / ErrDispatchNotInProgress if
 // the step is not the one due.
 

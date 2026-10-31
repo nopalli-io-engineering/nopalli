@@ -156,11 +156,11 @@ func TestIntegration_HTTPStack(t *testing.T) {
 		t.Fatalf("GET detail = %+v, want id %s in_progress", gotDetail, id)
 	}
 	// Children are projected onto the detail, carrying audit timestamps.
-	if len(gotDetail.AgendaItems) == 0 {
-		t.Fatal("GET detail: expected agenda items")
+	if len(gotDetail.Tasks) == 0 {
+		t.Fatal("GET detail: expected tasks")
 	}
-	if gotDetail.AgendaItems[0].CreatedAt.IsZero() || gotDetail.AgendaItems[0].UpdatedAt.IsZero() {
-		t.Fatalf("GET detail: agenda item missing timestamps: %+v", gotDetail.AgendaItems[0])
+	if gotDetail.Tasks[0].CreatedAt.IsZero() || gotDetail.Tasks[0].UpdatedAt.IsZero() {
+		t.Fatalf("GET detail: task missing timestamps: %+v", gotDetail.Tasks[0])
 	}
 	if len(gotDetail.Assignments) != 1 {
 		t.Fatalf("GET detail: assignments = %d, want 1", len(gotDetail.Assignments))

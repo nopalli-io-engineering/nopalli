@@ -206,7 +206,7 @@ func TestIntegration_ChildTimestampsSurviveSave(t *testing.T) {
 	t.Cleanup(pool.Close)
 	uow := coredb.NewUnitOfWork(pool)
 
-	d := liveLoadDispatch(t) // a queued live-load already has agenda items
+	d := liveLoadDispatch(t) // a queued live-load already has tasks
 	id := d.ID()
 	if err := uow.Do(ctx, func(tx coredb.DBTX) error {
 		return opsdb.NewDispatchRepository(tx, nil).Add(ctx, d)
@@ -214,19 +214,19 @@ func TestIntegration_ChildTimestampsSurviveSave(t *testing.T) {
 		t.Fatalf("add: %v", err)
 	}
 
-	// Read one agenda row's timestamps straight after insert.
-	agendaTimes := func() (createdAt, updatedAt time.Time) {
+	// Read one task row's timestamps straight after insert.
+	taskTimes := func() (createdAt, updatedAt time.Time) {
 		t.Helper()
 		err := pool.QueryRow(ctx, `
 SELECT created_at, updated_at
-FROM operations.intermodal_dispatch_agenda_items
-WHERE dispatch_id = $1 ORDER BY item_no LIMIT 1`, id.UUID()).Scan(&createdAt, &updatedAt)
+FROM operations.intermodal_dispatch_tasks
+WHERE dispatch_id = $1 ORDER BY task_no LIMIT 1`, id.UUID()).Scan(&createdAt, &updatedAt)
 		if err != nil {
-			t.Fatalf("read agenda timestamps: %v", err)
+			t.Fatalf("read task timestamps: %v", err)
 		}
 		return createdAt, updatedAt
 	}
-	created1, updated1 := agendaTimes()
+	created1, updated1 := taskTimes()
 
 	// Advance and save in a later transaction, so now() differs.
 	if err := uow.Do(ctx, func(tx coredb.DBTX) error {
@@ -251,7 +251,7 @@ WHERE dispatch_id = $1 ORDER BY item_no LIMIT 1`, id.UUID()).Scan(&createdAt, &u
 		t.Fatalf("advance+save: %v", err)
 	}
 
-	created2, updated2 := agendaTimes()
+	created2, updated2 := taskTimes()
 	if !created2.Equal(created1) {
 		t.Fatalf("created_at changed across save: %v -> %v (should be preserved)", created1, created2)
 	}

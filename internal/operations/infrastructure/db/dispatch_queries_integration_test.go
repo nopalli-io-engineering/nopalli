@@ -196,12 +196,12 @@ func TestIntegration_DispatchDetailChildren(t *testing.T) {
 		t.Fatalf("get: detail=%v err=%v", detail, err)
 	}
 
-	if len(detail.AgendaItems) == 0 {
-		t.Fatal("expected agenda items on the detail")
+	if len(detail.Tasks) == 0 {
+		t.Fatal("expected tasks on the detail")
 	}
-	for _, i := range detail.AgendaItems {
+	for _, i := range detail.Tasks {
 		if i.CreatedAt.IsZero() || i.UpdatedAt.IsZero() {
-			t.Fatalf("agenda item %v missing timestamps: %+v", i.ID, i)
+			t.Fatalf("task %v missing timestamps: %+v", i.ID, i)
 		}
 	}
 	if len(detail.Assignments) != 1 {

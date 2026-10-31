@@ -380,23 +380,23 @@ func TestGetDispatch_OK(t *testing.T) {
 		t.Fatalf("detail = %+v, want id %s dispatcher %s", resp, id.String(), dispatcher.String())
 	}
 	// Child collections with no rows serialize as [] (present, not null).
-	if got := w.Body.String(); !strings.Contains(got, `"agenda_items":[]`) {
-		t.Fatalf("empty agenda_items should be [], body=%s", got)
+	if got := w.Body.String(); !strings.Contains(got, `"tasks":[]`) {
+		t.Fatalf("empty tasks should be [], body=%s", got)
 	}
 }
 
 func TestGetDispatch_IncludesChildren(t *testing.T) {
 	id := intermodal.NewDispatchID()
-	itemID := intermodal.NewAgendaItemID().UUID()
+	taskID := intermodal.NewTaskID().UUID()
 	assignID := intermodal.NewAssignmentID().UUID()
 	now := time.Now().UTC()
 	q := &fakeQueries{detail: &application.DispatchDetail{
 		ID:       id.UUID(),
 		PlanType: intermodal.PlanLiveLoad,
 		Status:   intermodal.StatusInProgress,
-		AgendaItems: []application.AgendaItemView{{
-			ID: itemID, ItemNo: 1, Action: intermodal.ActionAcquireChassis,
-			Status: intermodal.AgendaItemPending, CreatedAt: now, UpdatedAt: now,
+		Tasks: []application.TaskView{{
+			ID: taskID, No: 1, Action: intermodal.ActionAcquireChassis,
+			Status: intermodal.TaskPending, CreatedAt: now, UpdatedAt: now,
 		}},
 		Assignments: []application.AssignmentView{{
 			ID: assignID, Status: intermodal.AssignmentPending, CreatedAt: now, UpdatedAt: now,
@@ -411,11 +411,11 @@ func TestGetDispatch_IncludesChildren(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if len(resp.AgendaItems) != 1 || resp.AgendaItems[0].ID != itemID.String() {
-		t.Fatalf("agenda_items = %+v, want one with id %s", resp.AgendaItems, itemID)
+	if len(resp.Tasks) != 1 || resp.Tasks[0].ID != taskID.String() {
+		t.Fatalf("tasks = %+v, want one with id %s", resp.Tasks, taskID)
 	}
-	if resp.AgendaItems[0].CreatedAt.IsZero() {
-		t.Fatal("agenda item created_at missing from wire view")
+	if resp.Tasks[0].CreatedAt.IsZero() {
+		t.Fatal("task created_at missing from wire view")
 	}
 	if len(resp.Assignments) != 1 || resp.Assignments[0].ID != assignID.String() {
 		t.Fatalf("assignments = %+v, want one with id %s", resp.Assignments, assignID)

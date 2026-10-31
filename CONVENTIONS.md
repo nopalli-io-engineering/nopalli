@@ -28,7 +28,7 @@ sibling move types like `flatbed` fit alongside it).
 The package qualifies every name, so we drop the aggregate prefix rdt needed for
 module-global names: `DispatchStatus` → `Status`, `DispatchAction` → `Action`.
 We keep a qualifier only where trimming would collide (three different status
-enums → `AssignmentStatus`, `CustodyEpisodeStatus`, `AgendaItemStatus`). Each
+enums → `AssignmentStatus`, `CustodyEpisodeStatus`, `TaskStatus`). Each
 ported symbol notes its rdt name in a doc comment for traceability.
 
 ## Identity — distinct struct types per id
@@ -65,7 +65,7 @@ Go's `(T, error)`.
   occurred-at). `SubjectID()` returns the aggregate's raw UUID (the outbox
   `aggregate_id`).
 - Aggregate roots embed `domain.Root` for event bookkeeping
-  (`RecordEvents` / `Events` / `PullEvents` / `ClearEvents`).
+  (`RecordEvents` / `Events` / `PullEvents` / `ClearEvents`).s
 
 ## Fidelity — port behavior, fix known quirks
 

@@ -1,12 +1,12 @@
 package intermodal
 
 // Move plans (rdt: value_objects.py MovePlan / LiveLoad / LiveUnload) describe a
-// kind of drayage move and know how to expand themselves into an ordered agenda
-// spec. They are pure value objects — no aggregate state — so the agenda for a
+// kind of drayage move and know how to expand themselves into an ordered task
+// spec. They are pure value objects — no aggregate state — so the tasks for a
 // given plan is deterministic and unit-testable on its own. DispatchFactory
 // (ported later with the aggregate) turns a plan's spec into a queued Dispatch.
 
-// MovePlan is a planned move that can produce the ordered agenda a Dispatch
+// MovePlan is a planned move that can produce the ordered tasks a Dispatch
 // will execute (rdt: MovePlan protocol).
 type MovePlan interface {
 	PlanType() PlanType
@@ -16,7 +16,7 @@ type MovePlan interface {
 // facilityAt returns a pointer to a copy of f, for the optional Facility field.
 func facilityAt(f FacilityID) *FacilityID { return &f }
 
-// containerDetails returns item details carrying a copy of c.
+// containerDetails returns task details carrying a copy of c.
 func containerDetails(c ContainerNumber) *TaskDetails {
 	return &TaskDetails{Container: &c}
 }
@@ -36,9 +36,9 @@ type LiveLoad struct {
 // PlanType identifies this as a live-load move.
 func (p LiveLoad) PlanType() PlanType { return PlanLiveLoad }
 
-// ToAgendaSpec expands the plan into its ordered agenda: set-up, then the core
+// TasksSpec expands the plan into its ordered tasks: set-up, then the core
 // deliver/hold/take at the dock, then wrap-up. Order and actions mirror rdt
-// exactly so the two apps plan identical agendas.
+// exactly so the two apps plan identical tasks.
 func (p LiveLoad) ToTasksSpec() []TaskSpec {
 	setUp := []TaskSpec{
 		{Action: ActionAcquireChassis},
@@ -87,7 +87,7 @@ type LiveUnload struct {
 // PlanType identifies this as a live-unload move.
 func (p LiveUnload) PlanType() PlanType { return PlanLiveUnload }
 
-// ToAgendaSpec expands the plan into its ordered agenda, mirroring rdt.
+// ToTasksSpec expands the plan into its ordered tasks, mirroring rdt.
 func (p LiveUnload) ToTasksSpec() []TaskSpec {
 	setUp := []TaskSpec{
 		{Action: ActionAcquireChassis},
@@ -121,7 +121,7 @@ func (p LiveUnload) ToTasksSpec() []TaskSpec {
 	return concat(setUp, core, wrapUp)
 }
 
-// concat flattens agenda segments into a single ordered slice.
+// concat flattens task segments into a single ordered slice.
 func concat(segments ...[]TaskSpec) []TaskSpec {
 	var n int
 	for _, s := range segments {

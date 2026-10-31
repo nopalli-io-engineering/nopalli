@@ -99,14 +99,14 @@ type Equipment struct {
 	Chassis   ChassisNumber
 }
 
-// AgendaItemDetails carries the per-item data an action may need — currently
-// just the container marking for container actions (rdt: AgendaItemDetails).
+// TaskDetails carries the per-task data an action may need — currently
+// just the container marking for container actions (rdt: TaskDetails).
 type TaskDetails struct {
 	Container *ContainerNumber
 }
 
-// AgendaItemSpec is the planned definition of one agenda step, before it
-// becomes a live AgendaItem on a Dispatch (rdt: AgendaItemSpec). Facility is
+// TaskSpec is the planned definition of one task, before it
+// becomes a live Task on a Dispatch (rdt: TaskSpec). Facility is
 // nil for actions that have no location (acquire/return chassis); Details is
 // nil for actions that carry no container.
 type TaskSpec struct {
@@ -163,8 +163,8 @@ func (p PlanType) Valid() bool {
 	}
 }
 
-// Action is one step the driver performs while executing the agenda (rdt:
-// DispatchAction). The agenda is an ordered list of these; the cursor enforces
+// Action is one step the driver performs while executing the tasks (rdt:
+// DispatchAction). The series of task is an ordered list of these; the cursor enforces
 // that they happen in sequence.
 type Action string
 
@@ -286,8 +286,8 @@ func (c ContainerClose) Valid() bool {
 	}
 }
 
-// AgendaItemStatus is the lifecycle of a single agenda item (rdt:
-// AgendaItemStatus).
+// TaskStatus is the lifecycle of a single task (rdt:
+// TaskStatus).
 type TaskStatus string
 
 const (
@@ -296,7 +296,7 @@ const (
 	TaskSkipped   TaskStatus = "skipped"
 )
 
-// Valid reports whether s is a known agenda item status.
+// Valid reports whether s is a known task status.
 func (s TaskStatus) Valid() bool {
 	switch s {
 	case TaskPending, TaskCompleted, TaskSkipped:

@@ -42,7 +42,7 @@ command and query endpoints are both built now (package
 | `POST /dispatches/{id}/chassis-return` | `ReturnChassis` | `{facility_id}` | 204 |
 
 `CreateDispatch` assembles a `LiveLoad`/`LiveUnload` from `plan_type` + the plan
-fields and rejects `AD_HOC` with 422 (no standard agenda to build).
+fields and rejects `AD_HOC` with 422 (no standard tasks to build).
 
 ## Go pieces
 
@@ -116,7 +116,7 @@ driven by an `operations:intermodal_dispatch.read_all` grant. An out-of-scope
 - **Built — query endpoints**: `GET /dispatches` (status/limit/offset query
   params; empty list serialized as `[]`) and `GET /dispatches/{id}` in
   `rest/reads.go`, over the `application.DispatchQueries` port. The detail view
-  projects the owned child collections (agenda items, assignments, chassis /
+  projects the owned child collections (tasks, assignments, chassis /
   container custody episodes), each carrying its `created_at`/`updated_at` audit
   timestamps; the child arrays are always present (empty, not null). The child
   tables' audit columns are preserved across saves because the repository

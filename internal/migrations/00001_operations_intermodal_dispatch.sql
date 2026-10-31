@@ -1,6 +1,6 @@
 -- +goose Up
 -- The Dispatch aggregate: a root table plus one child table per owned
--- collection (agenda items, assignments, chassis/container custody episodes),
+-- collection (tasks, assignments, chassis/container custody episodes),
 -- each FK'd back to the root with ON DELETE CASCADE so the aggregate is the
 -- transactional boundary. Enums are stored as text (app-level enums), ids as
 -- uuid, matching the nopalli domain model. Ported from rdt's operations schema;
@@ -18,8 +18,8 @@ CREATE TABLE operations.intermodal_dispatches (
     source_quote_id       uuid NULL UNIQUE,
     plan_type             text NOT NULL,
     status                text NOT NULL,
-    -- Position of the next agenda item to execute; NULL until execution begins.
-    item_cursor           integer NULL,
+    -- Position of the next task to execute; NULL until execution begins.
+    task_cursor           integer NULL,
     -- The assignment currently steering the dispatch: a soft reference into
     -- intermodal_dispatch_assignments (same aggregate), not a hard FK, to avoid
     -- a create-order cycle.
@@ -32,25 +32,25 @@ CREATE TABLE operations.intermodal_dispatches (
     updated_at            timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE operations.intermodal_dispatch_agenda_items (
+CREATE TABLE operations.intermodal_dispatch_tasks (
     id                uuid PRIMARY KEY,
     dispatch_id       uuid NOT NULL REFERENCES operations.intermodal_dispatches (id) ON DELETE CASCADE,
-    -- 1-based position within the dispatch's agenda; ordering is significant.
-    item_no           integer NOT NULL,
+    -- 1-based position within the dispatch's tasks; ordering is significant.
+    task_no           integer NOT NULL,
     action            text NOT NULL,
     facility_id       uuid NULL,
     status            text NOT NULL,
-    -- The item's details map (e.g. the container number captured at pickup), a
+    -- The task's details map (e.g. the container number captured at pickup), a
     -- small VO bag with no independent query needs — kept as JSONB.
     details           jsonb NOT NULL DEFAULT '{}',
-    -- Who actually executed the item, recorded at execution time.
+    -- Who actually executed the task, recorded at execution time.
     attributed_driver uuid NULL,
     attributed_truck  uuid NULL,
-    CONSTRAINT uq_intermodal_dispatch_agenda_items_position UNIQUE (dispatch_id, item_no)
+    CONSTRAINT uq_intermodal_dispatch_tasks_position UNIQUE (dispatch_id, task_no)
 );
 
-CREATE INDEX ix_intermodal_dispatch_agenda_items_dispatch
-    ON operations.intermodal_dispatch_agenda_items (dispatch_id);
+CREATE INDEX ix_intermodal_dispatch_tasks_dispatch
+    ON operations.intermodal_dispatch_tasks (dispatch_id);
 
 CREATE TABLE operations.intermodal_dispatch_assignments (
     id          uuid PRIMARY KEY,
@@ -97,6 +97,6 @@ CREATE INDEX ix_intermodal_dispatch_container_custody_episodes_dispatch
 DROP TABLE operations.intermodal_dispatch_container_custody_episodes;
 DROP TABLE operations.intermodal_dispatch_chassis_custody_episodes;
 DROP TABLE operations.intermodal_dispatch_assignments;
-DROP TABLE operations.intermodal_dispatch_agenda_items;
+DROP TABLE operations.intermodal_dispatch_tasks;
 DROP TABLE operations.intermodal_dispatches;
 DROP SCHEMA IF EXISTS operations;
