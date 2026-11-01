@@ -1,17 +1,21 @@
 package intermodal
 
-// import "testing"
+import "testing"
 
-// var (
-// 	driver = NewDriverID()
-// 	truck  = NewTruckID()
-// )
+var (
+	driver = NewDriverID()
+	truck  = NewTruckID()
+)
 
-// func newRun() *Run {
-// 	return &Run{}
-// }
+func createRun() (*Run, error) {
+	return Plan()
+}
 
-// func TestAssign(t *testing.T) {
-// 	r := newRun()
-// 	r.Assign()
-// }
+func TestAssign(t *testing.T) {
+	r, _ := createRun()
+	r.Assign(&driver, &truck)
+
+	if r.Status() != RunPlanned {
+		t.Fatalf("status = %v, want planned", r.Status())
+	}
+}

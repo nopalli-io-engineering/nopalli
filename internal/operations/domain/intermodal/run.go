@@ -21,6 +21,7 @@ type Stop struct {
 	id       StopID
 	status   StopStatus
 	location LocationRef
+	window   AppointmentWindow
 	tasks    []Task
 }
 
@@ -34,6 +35,9 @@ type Assignment struct {
 	truckID  TruckID
 	status   AssignmentStatus
 }
+
+func (a *Assignment) ID() AssignmentID         { return a.id }
+func (a *Assignment) Status() AssignmentStatus { return a.status }
 
 // run aggregate
 type Run struct {
@@ -56,8 +60,16 @@ func (r *Run) Approve() error { return nil }
 func (r *Run) Start() error   { return nil }
 func (r *Run) Verify() error  { return nil }
 
-// Task execution commands
+// task execution commands
 func (r *Run) PickUpContainer(taskID TaskID) error                            { return nil }
 func (r *Run) DropOffContainer(taskID TaskID) error                           { return nil }
 func (r *Run) PickUpChassis(taskID TaskID, chassisNumber ChassisNumber) error { return nil }
 func (r *Run) DropOffChassis(taskID TaskID) error                             { return nil }
+
+func Plan() (*Run, error) {
+	r := &Run{
+		id:     NewRunID(),
+		status: RunPlanned,
+	}
+	return r, nil
+}

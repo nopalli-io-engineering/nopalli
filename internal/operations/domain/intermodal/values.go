@@ -12,6 +12,15 @@ const (
 	DocProofOfDelivery DocumentKind = "proof_of_delivery"
 )
 
+func (k DocumentKind) Valid() bool {
+	switch k {
+	case DocGateTicket, DocProofOfDelivery:
+		return true
+	default:
+		return false
+	}
+}
+
 type DocumentRef struct {
 	ID         DocumentID
 	Kind       DocumentKind
@@ -67,6 +76,15 @@ const (
 	LocationContainerDepot   LocationKind = "container_depot"
 	LocationCarrierYard      LocationKind = "carrier_yard"
 )
+
+func (k LocationKind) Valid() bool {
+	switch k {
+	case LocationRailRamp, LocationCustomerFacility, LocationChassisPool, LocationContainerDepot, LocationCarrierYard:
+		return true
+	default:
+		return false
+	}
+}
 
 type LocationRef struct {
 	ID      LocationID
@@ -216,4 +234,9 @@ func (s RunStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// RunPlan
+type RunPlan struct {
+	Stops []Stop
 }
