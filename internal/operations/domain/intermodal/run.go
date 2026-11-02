@@ -3,7 +3,7 @@ package intermodal
 import (
 	"time"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 // task entity
@@ -43,7 +43,7 @@ func (a *Assignment) Status() AssignmentStatus { return a.status }
 
 // run aggregate
 type Run struct {
-	domain.Root
+	kernel.Root
 
 	id      RunID
 	status  RunStatus
@@ -63,7 +63,7 @@ func (r *Run) AssignTruck() error   { return nil }
 func (r *Run) Accept() error  { return nil }
 func (r *Run) Decline() error { return nil }
 
-func (r *Run) Assign(driver DriverRef, truck TruckRef, by domain.UserID, at time.Time) error {
+func (r *Run) Assign(driver DriverRef, truck TruckRef, by kernel.UserID, at time.Time) error {
 	return nil
 }
 
@@ -81,7 +81,7 @@ func (r *Run) DropOffChassis(taskID TaskID) error                             { 
 
 func Plan(stops []Stop) *Run {
 	return &Run{
-		Root:   domain.NewRoot(domain.NewTenantID()),
+		Root:   kernel.NewRoot(kernel.NewTenantID()),
 		id:     NewRunID(),
 		status: RunPlanned,
 		stops:  stops,

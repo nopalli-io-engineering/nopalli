@@ -1,7 +1,7 @@
 package intermodal_old
 
 import (
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 // This file ports the Dispatch aggregate (rdt: root.py): the aggregate root,
@@ -153,7 +153,7 @@ func (t *Task) execute(byDriver DriverID, withTruck TruckID) {
 // Dispatch is the intermodal drayage move aggregate (rdt: Dispatch). It is a
 // sequential state machine
 type Dispatch struct {
-	domain.Root
+	kernel.Root
 
 	id                  DispatchID
 	sourceQuoteID       SourceQuoteID // zero when there is no source quote
@@ -527,7 +527,7 @@ func (d *Dispatch) PickUpPremountedContainer(chassisNumber ChassisNumber) (TaskI
 		chassisNumber: chassisNumber,
 		status:        CustodyOpened,
 	})
-	var pickup domain.DomainEvent
+	var pickup kernel.DomainEvent
 	if task.action == ActionPickUpLoadedPremountedContainer {
 		pickup = LoadedContainerPickedUp{
 			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,
@@ -625,7 +625,7 @@ func (d *Dispatch) DropPremountedContainer() (TaskID, error) {
 	if episode := d.ChassisEpisode(chassisNumber); episode != nil {
 		episode.close()
 	}
-	var deliver domain.DomainEvent
+	var deliver kernel.DomainEvent
 	if task.action == ActionDropEmptyPremountedContainer {
 		deliver = EmptyContainerDropped{
 			DispatchID: d.id, FacilityID: deref(task.facilityID), ContainerNumber: containerNumber,

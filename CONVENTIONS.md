@@ -12,7 +12,7 @@ a module **domain layer first**.
 
 ```
 internal/
-  core/domain/                     shared domain primitives (rdt: app/core/domain)
+  core/kernel/                     shared domain primitives (rdt: app/core/domain)
   <context>/domain/<aggregate>/    one package per aggregate (rdt: modules/<ctx>/domain/aggregates/<agg>)
   <context>/application/           services + read models (later)
   <context>/infrastructure/        db repos, messaging, adapters (later)

@@ -3,8 +3,8 @@ package rest
 import (
 	"errors"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 )
 
@@ -15,14 +15,14 @@ import (
 func statusFor(err error) (status int, code string) {
 	switch {
 	// Boundary/value validation that surfaced from the domain.
-	case errors.Is(err, intermodal_old.ErrInvalidValue), errors.Is(err, domain.ErrInvalidID):
+	case errors.Is(err, intermodal_old.ErrInvalidValue), errors.Is(err, kernel.ErrInvalidID):
 		return 400, "invalid_request"
 	// Optimistic-concurrency loss — safe to retry after re-reading.
 	case errors.Is(err, coredb.ErrConcurrencyConflict):
 		return 409, "concurrency_conflict"
 	}
 
-	var de *domain.Error
+	var de *kernel.Error
 	if errors.As(err, &de) {
 		switch de.Qualified() {
 		case "operations.dispatch_not_found":

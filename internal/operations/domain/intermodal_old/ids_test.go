@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 func TestNewDispatchID_NonZeroAndUnique(t *testing.T) {
@@ -36,7 +36,7 @@ func TestParseDispatchID_Rejects(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error for %q", raw)
 		}
-		if !errors.Is(err, domain.ErrInvalidID) {
+		if !errors.Is(err, kernel.ErrInvalidID) {
 			t.Fatalf("expected ErrInvalidID for %q, got %v", raw, err)
 		}
 	}

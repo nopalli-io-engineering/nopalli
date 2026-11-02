@@ -33,7 +33,7 @@ type UnitOfWork interface {
 }
 
 // AccessControl guards a command by permission (rdt: core.domain.ports.
-// AccessControl). Require returns a non-nil error (e.g. domain.PermissionDenied)
+// AccessControl). Require returns a non-nil error (e.g. kernel.PermissionDenied)
 // when the caller may not perform the action.
 type AccessControl interface {
 	Require(ctx context.Context, permission string) error

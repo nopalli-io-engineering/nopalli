@@ -11,7 +11,7 @@ package intermodal_old
 // Infrastructure maps Snapshot <-> SQL rows and never sees aggregate internals.
 // Reconstitute raises no domain events (rdt had to re-init the transient event
 // buffer on load; here a reconstituted aggregate simply starts with an empty
-// domain.Root).
+// kernel.Root).
 //
 // Optionality here uses pointers (nil = SQL NULL), the persistence-boundary
 // convention; the aggregate's own zero-value sentinels are translated at the

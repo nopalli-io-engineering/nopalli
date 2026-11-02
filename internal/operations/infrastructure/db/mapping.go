@@ -15,7 +15,7 @@ import (
 // and the task details map are encoded here, keeping the repository's SQL
 // free of marshalling noise.
 
-// identity is any typed id (all expose UUID via the embedded domain.ID).
+// identity is any typed id (all expose UUID via the embedded kernel.ID).
 type identity interface{ UUID() uuid.UUID }
 
 // pgID binds a non-null typed id.

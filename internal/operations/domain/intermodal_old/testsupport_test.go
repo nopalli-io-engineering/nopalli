@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 // Shared test support, porting rdt's tests/helpers.py. (rdt's *_committed
@@ -13,7 +13,7 @@ import (
 // eventTypeNames returns the concrete payload type name of each recorded event,
 // in order (rdt: types_of). The payload is the embedded DomainEvent on the
 // envelope.
-func eventTypeNames(events []domain.RecordedEvent) []string {
+func eventTypeNames(events []kernel.RecordedEvent) []string {
 	out := make([]string, len(events))
 	for i, e := range events {
 		out[i] = reflect.TypeOf(e.DomainEvent).Name()
@@ -23,7 +23,7 @@ func eventTypeNames(events []domain.RecordedEvent) []string {
 
 // oneEvent asserts exactly one recorded event has payload type T and returns
 // that payload (rdt: one).
-func oneEvent[T domain.DomainEvent](t *testing.T, events []domain.RecordedEvent) T {
+func oneEvent[T kernel.DomainEvent](t *testing.T, events []kernel.RecordedEvent) T {
 	t.Helper()
 	var found T
 	count := 0
@@ -50,7 +50,7 @@ func trackFrom(d *Dispatch) *eventTracker {
 	return &eventTracker{d: d, seen: len(d.Events())}
 }
 
-func (tr *eventTracker) since() []domain.RecordedEvent {
+func (tr *eventTracker) since() []kernel.RecordedEvent {
 	all := tr.d.Events()
 	fresh := all[tr.seen:]
 	tr.seen = len(all)
@@ -75,7 +75,7 @@ func assertTaskCompletedBy(t *testing.T, d *Dispatch, id TaskID, by Assignee) {
 	}
 }
 
-func assertTypeNames(t *testing.T, events []domain.RecordedEvent, want ...string) {
+func assertTypeNames(t *testing.T, events []kernel.RecordedEvent, want ...string) {
 	t.Helper()
 	got := eventTypeNames(events)
 	if len(got) != len(want) {

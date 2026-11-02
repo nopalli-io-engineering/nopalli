@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 // fixedClock is a deterministic clock for tests. Now returns the current instant
@@ -25,7 +25,7 @@ func mustNoError(t *testing.T, err error) {
 	}
 }
 
-func eventTypeNames(events []domain.RecordedEvent) []string {
+func eventTypeNames(events []kernel.RecordedEvent) []string {
 	out := make([]string, len(events))
 	for i, e := range events {
 		out[i] = reflect.TypeOf(e.DomainEvent).Name()
@@ -33,7 +33,7 @@ func eventTypeNames(events []domain.RecordedEvent) []string {
 	return out
 }
 
-func assertTypeNames(t *testing.T, events []domain.RecordedEvent, want ...string) {
+func assertTypeNames(t *testing.T, events []kernel.RecordedEvent, want ...string) {
 	t.Helper()
 	got := eventTypeNames(events)
 	if len(got) != len(want) {

@@ -12,14 +12,14 @@ package outbox
 import (
 	"context"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
 	coredb "github.com/nopalli-io/nopalli/internal/core/infrastructure/db"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 // Recorder persists the domain events raised by a command, in the transaction
 // the repository is running in (rdt: the Outbox port + OutboxPublisher).
 type Recorder interface {
-	Record(ctx context.Context, q coredb.DBTX, events []domain.RecordedEvent) error
+	Record(ctx context.Context, q coredb.DBTX, events []kernel.RecordedEvent) error
 }
 
 // Noop is a Recorder that discards events — the default until the durable
@@ -28,4 +28,4 @@ type Recorder interface {
 type Noop struct{}
 
 // Record implements Recorder by doing nothing.
-func (Noop) Record(context.Context, coredb.DBTX, []domain.RecordedEvent) error { return nil }
+func (Noop) Record(context.Context, coredb.DBTX, []kernel.RecordedEvent) error { return nil }

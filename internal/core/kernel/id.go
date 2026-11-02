@@ -1,7 +1,7 @@
-// Package domain holds the primitives every bounded context's domain layer is
+// Package kernel holds the primitives every bounded context's domain layer is
 // built on: identity, domain events, the aggregate-root base, and the domain
 // error type. It is the Go counterpart of rdt's app/core/domain package.
-package domain
+package kernel
 
 import (
 	"errors"
@@ -17,7 +17,7 @@ var ErrInvalidID = errors.New("invalid id")
 // ID is the shared identity primitive (rdt: core.domain.identity.EntityID).
 //
 // It is never used on its own. Each aggregate embeds it in a distinct named
-// type — type DispatchID struct{ domain.ID } — so DispatchID and DriverID are
+// type — type DispatchID struct{ kernel.ID } — so DispatchID and DriverID are
 // different types the compiler keeps apart, while the UUID plumbing (v7
 // generation, parsing, zero-checking, stringification) lives here once.
 //

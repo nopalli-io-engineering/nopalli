@@ -1,4 +1,4 @@
-package domain
+package kernel
 
 type Root struct {
 	tenantID TenantID

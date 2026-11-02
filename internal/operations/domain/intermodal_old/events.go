@@ -5,7 +5,7 @@ import "github.com/google/uuid"
 // Domain events raised by the Dispatch aggregate (rdt: events.py). Each is a
 // plain payload carrying only its domain fields and SubjectID — the aggregate
 // it concerns (the outbox's aggregate_id). The delivery envelope (event id +
-// occurred-at) is stamped at record time by domain.Root, not here, so these
+// occurred-at) is stamped at record time by kernel.Root, not here, so these
 // structs are constructed as bare literals: DispatchQueued{DispatchID: id, ...}.
 
 // DispatchQueued: a dispatch was created and queued.

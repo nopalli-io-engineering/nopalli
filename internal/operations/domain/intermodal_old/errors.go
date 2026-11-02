@@ -3,12 +3,12 @@ package intermodal_old
 import (
 	"fmt"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 // Domain errors raised by the Dispatch aggregate (rdt: errors.py). All share
 // the "operations" namespace. The parameterless ones are package-level
-// *domain.Error values, so callers match them with errors.Is; the message text
+// *kernel.Error values, so callers match them with errors.Is; the message text
 // matches rdt exactly.
 //
 // Two codes are corrected from rdt (see CONVENTIONS.md "fix known quirks"):
@@ -18,57 +18,57 @@ import (
 //     "dispatch_assigned_while_in_progress" and is now
 //     "dispatch_assigned_after_completion".
 var (
-	ErrDispatchNotDelegated = &domain.Error{
+	ErrDispatchNotDelegated = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_not_delegated",
 		Message:   "A dispatch needs a dispatcher for approval.",
 	}
-	ErrDispatchNotAssigned = &domain.Error{
+	ErrDispatchNotAssigned = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_not_assigned",
 		Message:   "A dispatch needs an assignment for approval.",
 	}
-	ErrDispatchAssigneeEmpty = &domain.Error{
+	ErrDispatchAssigneeEmpty = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_assignee_empty",
 		Message:   "Dispatch needs a valid assignee to carry out action.",
 	}
-	ErrDispatchDriverMissing = &domain.Error{
+	ErrDispatchDriverMissing = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_driver_missing",
 		Message:   "Dispatch needs a driver.",
 	}
-	ErrDispatchTruckMissing = &domain.Error{
+	ErrDispatchTruckMissing = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_truck_missing",
 		Message:   "Dispatch needs a truck.",
 	}
-	ErrDispatchNotReady = &domain.Error{
+	ErrDispatchNotReady = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_not_ready",
 		Message:   "Only a ready dispatch can be started.",
 	}
-	ErrDispatchNotInProgress = &domain.Error{
+	ErrDispatchNotInProgress = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_not_in_progress",
 		Message:   "Dispatch must be progress for action to be taken.",
 	}
-	ErrDispatchNotCompleted = &domain.Error{
+	ErrDispatchNotCompleted = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_not_completed",
 		Message:   "Dispatch must be completed for action to be taken.",
 	}
-	ErrDispatchAlreadyAssignedAssignee = &domain.Error{
+	ErrDispatchAlreadyAssignedAssignee = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_already_assigned_assignee",
 		Message:   "Dispatch is already assigned the same driver-truck pair.",
 	}
-	ErrDispatchAssignedWhileInProgress = &domain.Error{
+	ErrDispatchAssignedWhileInProgress = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_assigned_while_in_progress",
 		Message:   "Dispatch cannot be assigned while in progress.",
 	}
-	ErrDispatchAssignedAfterCompletion = &domain.Error{
+	ErrDispatchAssignedAfterCompletion = &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_assigned_after_completion",
 		Message:   "Dispatch cannot be assigned after completion.",
@@ -77,9 +77,9 @@ var (
 
 // NewDispatchNotFound is raised by a repository when no dispatch has the given
 // id (rdt: DispatchNotFound). Parameterized by id, so it is a constructor
-// rather than a sentinel; match it on code via errors.As to *domain.Error.
-func NewDispatchNotFound(id DispatchID) *domain.Error {
-	return &domain.Error{
+// rather than a sentinel; match it on code via errors.As to *kernel.Error.
+func NewDispatchNotFound(id DispatchID) *kernel.Error {
+	return &kernel.Error{
 		Namespace: "operations",
 		Code:      "dispatch_not_found",
 		Message:   "no dispatch with id " + id.String(),
@@ -89,16 +89,16 @@ func NewDispatchNotFound(id DispatchID) *domain.Error {
 // OutOfSequenceError is raised when the attempted execution action is not the
 // one the task cursor is currently at (rdt: DispatchActionOutOfSequence). It
 // carries the Expected action so callers can tell the driver what to do next.
-// Match it with errors.As; it unwraps to its underlying *domain.Error.
+// Match it with errors.As; it unwraps to its underlying *kernel.Error.
 type OutOfSequenceError struct {
 	Expected Action
-	err      *domain.Error
+	err      *kernel.Error
 }
 
 func newOutOfSequence(expected Action) *OutOfSequenceError {
 	return &OutOfSequenceError{
 		Expected: expected,
-		err: &domain.Error{
+		err: &kernel.Error{
 			Namespace: "operations",
 			Code:      "dispatch_action_out_of_sequence",
 			Message:   fmt.Sprintf("Expected action '%s' not taken", expected),

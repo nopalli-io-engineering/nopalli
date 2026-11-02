@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 	"github.com/nopalli-io/nopalli/internal/operations/application"
 	"github.com/nopalli-io/nopalli/internal/operations/domain/intermodal_old"
 	"github.com/nopalli-io/nopalli/internal/operations/interfaces/rest"
@@ -244,7 +244,7 @@ func TestApprove_NotFound(t *testing.T) {
 }
 
 func TestApprove_PermissionDenied(t *testing.T) {
-	f := &fakeService{err: domain.PermissionDenied("operations:intermodal_dispatch.approve")}
+	f := &fakeService{err: kernel.PermissionDenied("operations:intermodal_dispatch.approve")}
 	mux := serve(f)
 	id := intermodal_old.NewDispatchID()
 	w := do(t, mux, http.MethodPost, dispatchesPath+"/"+id.String()+"/approval", "")

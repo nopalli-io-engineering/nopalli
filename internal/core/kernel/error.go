@@ -1,4 +1,4 @@
-package domain
+package kernel
 
 // Error is a domain rule violation (rdt: core.domain.error.DomainError). It
 // carries a stable, machine-readable "namespace.code" — e.g. "operations.

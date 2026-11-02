@@ -3,13 +3,13 @@ package intermodal
 import (
 	"testing"
 
-	"github.com/nopalli-io/nopalli/internal/core/domain"
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
 var (
 	driver = NewDriverID()
 	truck  = NewTruckID()
-	user   = domain.NewUserID()
+	user   = kernel.NewUserID()
 )
 
 func newRun() *Run {
