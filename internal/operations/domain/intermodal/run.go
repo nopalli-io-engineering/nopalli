@@ -1,6 +1,8 @@
 package intermodal
 
 import (
+	"time"
+
 	"github.com/nopalli-io/nopalli/internal/core/domain"
 )
 
@@ -52,10 +54,21 @@ type Run struct {
 func (r *Run) ID() RunID         { return r.id }
 func (r *Run) Status() RunStatus { return r.status }
 
-// lifecycle commands
-func (r *Run) Assign(driverID *DriverID, truckID *TruckID) (AssignmentID, error) {
-	return AssignmentID{}, nil
+// assignment commands
+func (r *Run) OfferTo() error       { return nil }
+func (r *Run) WithdrawOffer() error { return nil }
+func (r *Run) Release() error       { return nil }
+func (r *Run) AssignTruck() error   { return nil }
+
+func (r *Run) Accept() error  { return nil }
+func (r *Run) Decline() error { return nil }
+
+func (r *Run) Assign(driver DriverRef, truck TruckRef, by domain.UserID, at time.Time) error {
+	return nil
 }
+
+// lifecycle commands
+
 func (r *Run) Approve() error { return nil }
 func (r *Run) Start() error   { return nil }
 func (r *Run) Verify() error  { return nil }
@@ -66,10 +79,11 @@ func (r *Run) DropOffContainer(taskID TaskID) error                           { 
 func (r *Run) PickUpChassis(taskID TaskID, chassisNumber ChassisNumber) error { return nil }
 func (r *Run) DropOffChassis(taskID TaskID) error                             { return nil }
 
-func Plan() (*Run, error) {
-	r := &Run{
+func Plan(stops []Stop) *Run {
+	return &Run{
+		Root:   domain.NewRoot(domain.NewTenantID()),
 		id:     NewRunID(),
 		status: RunPlanned,
+		stops:  stops,
 	}
-	return r, nil
 }

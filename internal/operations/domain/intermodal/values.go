@@ -236,7 +236,21 @@ func (s RunStatus) Valid() bool {
 	}
 }
 
-// RunPlan
-type RunPlan struct {
-	Stops []Stop
+type DriverKind string
+
+const (
+	CompanyDriver DriverKind = "company_driver"
+	OwnerOperator DriverKind = "owner_operator"
+)
+
+type DriverRef struct {
+	ID   DriverID
+	Name string
+	Kind DriverKind
+}
+
+type TruckRef struct {
+	ID         TruckID
+	UnitNumber string // what desk and driver call truck
+	Plate      string // what terminal gate asks for
 }

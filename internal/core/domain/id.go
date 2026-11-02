@@ -71,3 +71,20 @@ func (i ID) String() string {
 	}
 	return i.v.String()
 }
+
+// Common IDs
+type TenantID struct{ ID }
+type UserID struct{ ID }
+
+func NewTenantID() TenantID { return TenantID{NewID()} }
+func NewUserID() UserID     { return UserID{NewID()} }
+
+func ParseTenantID(s string) (TenantID, error) {
+	id, err := ParseID((s))
+	return TenantID{id}, err
+}
+
+func ParseUserID(s string) (UserID, error) {
+	id, err := ParseID((s))
+	return UserID{id}, err
+}

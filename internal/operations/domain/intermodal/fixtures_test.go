@@ -10,7 +10,7 @@ const (
 	// Chicago-area drayage facilities; coordinates are approximate to the street
 	// address. time.Time and struct values can't be Go consts, so the
 	// appointment windows are kept here as RFC3339 strings (America/Chicago,
-	// CST = -06:00) and parsed in liveLoadRunPlan.
+	// CST = -06:00) and parsed in liveLoadStops.
 
 	// Chassis pool — ITS ConGlobal / ConGlobal Industries, Forest View.
 	poolName    = "ConGlobal Forest View"
@@ -67,7 +67,18 @@ const (
 	poolInWindowRef   = "Pool return GOLD-4471-R"
 )
 
-func liveLoadRunPlan() RunPlan {
+// Example assignee for the lifecycle tests: the shared driver/truck IDs dressed
+// with the identifiers a desk and a gate would actually use.
+var (
+	driverRef = DriverRef{ID: driver, Name: "Marcus Alvarez", Kind: CompanyDriver}
+	truckRef  = TruckRef{ID: truck, UnitNumber: "T-114", Plate: "IL P839120"}
+)
+
+// testNow is the deterministic clock's starting instant: 06:00 on the fixture's
+// export day, America/Chicago (= 12:00 UTC).
+var testNow = time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
+
+func liveLoadStops() []Stop {
 	mustTime := func(s string) time.Time {
 		t, err := time.Parse(time.RFC3339, s)
 		if err != nil {
@@ -210,5 +221,5 @@ func liveLoadRunPlan() RunPlan {
 			},
 		},
 	}
-	return RunPlan{Stops: stops}
+	return stops
 }

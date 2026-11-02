@@ -1,21 +1,33 @@
 package intermodal
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/nopalli-io/nopalli/internal/core/domain"
+)
 
 var (
 	driver = NewDriverID()
 	truck  = NewTruckID()
+	user   = domain.NewUserID()
 )
 
-func createRun() (*Run, error) {
-	return Plan()
+func newRun() *Run {
+	stops := liveLoadStops()
+	return Plan(stops)
 }
 
-func TestAssign(t *testing.T) {
-	r, _ := createRun()
-	r.Assign(&driver, &truck)
+func TestOfferTrip(t *testing.T) {
+	r := newRun()
+	err := r.Assign(driverRef, truckRef, user, testNow)
 
+	mustNoError(t, err)
 	if r.Status() != RunPlanned {
 		t.Fatalf("status = %v, want planned", r.Status())
 	}
+	// want := Assignee{Driver: driver, Truck: truck}
+	// if got, ok := r.Assignee(); !ok || got != expectedAssignee {
+	// 	t.Fatalf("current assignee = %v,%v", got, ok)
+	// }
+	// assertTypeNames(t, ev, "")
 }
