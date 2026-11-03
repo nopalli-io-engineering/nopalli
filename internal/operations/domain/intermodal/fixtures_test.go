@@ -74,7 +74,7 @@ const (
 // Example assignee for the lifecycle tests: the shared driver/truck IDs dressed
 // with the identifiers a desk and a gate would actually use.
 var (
-	testNow = time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
+	testNow  = time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
 	testUser = kernel.NewUserID()
 )
 
@@ -88,10 +88,6 @@ func aCompanyDriver() DriverRef {
 
 func aTruck() TruckRef {
 	return TruckRef{ID: NewTruckID(), UnitNumber: "T-114", Plate: "IL P839120"}
-}
-
-func aUser() kernel.UserID {
-	return kernel.NewUserID()
 }
 
 // testNow is the deterministic clock's starting instant: 06:00 on the fixture's

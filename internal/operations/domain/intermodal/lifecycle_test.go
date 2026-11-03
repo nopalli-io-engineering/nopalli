@@ -8,12 +8,6 @@ import (
 	"github.com/nopalli-io/nopalli/internal/core/kernel"
 )
 
-var (
-	driver = NewDriverID()
-	truck  = NewTruckID()
-	// user   = kernel.NewUserID()
-)
-
 func newTestRun() *Run {
 	stops := liveLoadStops()
 	return Plan(stops)
