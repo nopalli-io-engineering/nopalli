@@ -49,10 +49,10 @@ func TestAssign(t *testing.T) {
 		t.Errorf("assignment mismatch (-want +got):\n%s", diff)
 	}
 	gotEvents := getEvents(r)
-	wantEvets := []kernel.DomainEvent{
+	wantEvents := []kernel.DomainEvent{
 		DriverAssigned{RunID: r.ID(), Driver: driver.ID, Truck: truck.ID, By: user, At: at},
 	}
-	if diff := cmp.Diff(wantEvets, gotEvents); diff != "" {
+	if diff := cmp.Diff(wantEvents, gotEvents); diff != "" {
 		t.Errorf("events (-want +got):\n%s", diff)
 	}
 }
