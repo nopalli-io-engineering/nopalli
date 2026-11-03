@@ -206,6 +206,18 @@ const (
 	AssignmentReleased  AssignmentStatus = "released"
 )
 
+func (s AssignmentStatus) IsLive() bool {
+	return s == AssignmentOffered || s == AssignmentAccepted
+}
+
+func (s AssignmentStatus) IsTerminal() bool {
+	switch s {
+	case AssignmentDeclined, AssignmentWithdrawn, AssignmentReleased:
+		return true
+	}
+	return false
+}
+
 func (s AssignmentStatus) Valid() bool {
 	switch s {
 	case AssignmentOffered, AssignmentAccepted, AssignmentDeclined, AssignmentWithdrawn, AssignmentReleased:
@@ -249,8 +261,12 @@ type DriverRef struct {
 	Kind DriverKind
 }
 
+func (d DriverRef) IsZero() bool { return d.ID.IsZero() }
+
 type TruckRef struct {
 	ID         TruckID
 	UnitNumber string // what desk and driver call truck
 	Plate      string // what terminal gate asks for
 }
+
+func (t TruckRef) IsZero() bool { return t.ID.IsZero() }

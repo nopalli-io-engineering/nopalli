@@ -3,6 +3,7 @@ module github.com/nopalli-io/nopalli
 go 1.27.3
 
 require (
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/pressly/goose/v3 v3.29.0

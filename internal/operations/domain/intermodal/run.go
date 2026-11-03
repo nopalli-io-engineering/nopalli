@@ -32,27 +32,44 @@ func (s *Stop) Status() StopStatus { return s.status }
 
 // assignment aggregate
 type Assignment struct {
-	id       AssignmentID
-	driverID DriverID
-	truckID  TruckID
-	status   AssignmentStatus
+	id         AssignmentID
+	driver     DriverRef
+	truck      TruckRef
+	status     AssignmentStatus
+	acceptedAt time.Time
 }
 
-func (a *Assignment) ID() AssignmentID         { return a.id }
-func (a *Assignment) Status() AssignmentStatus { return a.status }
+func newAssignment(driver DriverRef, truck TruckRef, status AssignmentStatus, at time.Time) Assignment {
+	return Assignment{driver: driver, truck: truck, status: status, acceptedAt: at}
+}
+
+func (a Assignment) ID() AssignmentID         { return a.id }
+func (a Assignment) Driver() DriverRef        { return a.driver }
+func (a Assignment) Truck() TruckRef          { return a.truck }
+func (a Assignment) Status() AssignmentStatus { return a.status }
+func (a Assignment) HasTruck() bool           { return !a.truck.IsZero() }
 
 // run aggregate
 type Run struct {
 	kernel.Root
 
-	id      RunID
-	status  RunStatus
-	stops   []Stop
-	version int
+	id          RunID
+	status      RunStatus
+	stops       []Stop
+	assignments []Assignment
+	version     int
 }
 
 func (r *Run) ID() RunID         { return r.id }
 func (r *Run) Status() RunStatus { return r.status }
+func (r *Run) CurrentAssignment() (Assignment, bool) {
+	for _, a := range r.assignments {
+		if a.status.IsLive() {
+			return a, true
+		}
+	}
+	return Assignment{}, false
+}
 
 // assignment commands
 func (r *Run) OfferTo() error       { return nil }
@@ -64,6 +81,9 @@ func (r *Run) Accept() error  { return nil }
 func (r *Run) Decline() error { return nil }
 
 func (r *Run) Assign(driver DriverRef, truck TruckRef, by kernel.UserID, at time.Time) error {
+	a := newAssignment(driver, truck, AssignmentAccepted, at)
+	r.assignments = append(r.assignments, a)
+	r.RecordEvents(DriverAssigned{RunID: r.ID(), Driver: driver.ID, Truck: truck.ID, By: by, At: at})
 	return nil
 }
 
@@ -71,7 +91,6 @@ func (r *Run) Assign(driver DriverRef, truck TruckRef, by kernel.UserID, at time
 
 func (r *Run) Approve() error { return nil }
 func (r *Run) Start() error   { return nil }
-func (r *Run) Verify() error  { return nil }
 
 // task execution commands
 func (r *Run) PickUpContainer(taskID TaskID) error                            { return nil }

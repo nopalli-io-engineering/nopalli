@@ -73,18 +73,27 @@ func (i ID) String() string {
 }
 
 // Common IDs
-type TenantID struct{ ID }
-type UserID struct{ ID }
+type TenantID struct{ uuid.UUID }
+type UserID struct{ uuid.UUID }
 
-func NewTenantID() TenantID { return TenantID{NewID()} }
-func NewUserID() UserID     { return UserID{NewID()} }
+func NewTenantID() TenantID { return TenantID{uuid.Must(uuid.NewV7())} }
+func NewUserID() UserID     { return UserID{uuid.Must(uuid.NewV7())} }
+
+func (id TenantID) IsZero() bool { return id.UUID == uuid.Nil }
+func (id UserID) IsZero() bool   { return id.UUID == uuid.Nil }
 
 func ParseTenantID(s string) (TenantID, error) {
-	id, err := ParseID((s))
-	return TenantID{id}, err
+	u, err := uuid.Parse(s)
+	if err != nil {
+		return TenantID{}, fmt.Errorf("invalid tenant id %q: %w", s, err)
+	}
+	return TenantID{u}, nil
 }
 
 func ParseUserID(s string) (UserID, error) {
-	id, err := ParseID((s))
-	return UserID{id}, err
+	u, err := uuid.Parse(s)
+	if err != nil {
+		return UserID{}, fmt.Errorf("invalid user id %q: %w", s, err)
+	}
+	return UserID{u}, nil
 }
