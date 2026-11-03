@@ -1,6 +1,10 @@
 package intermodal
 
-import "time"
+import (
+	"time"
+
+	"github.com/nopalli-io/nopalli/internal/core/kernel"
+)
 
 const (
 	chassis   = ChassisNumber("CHAS-0001")
@@ -70,13 +74,28 @@ const (
 // Example assignee for the lifecycle tests: the shared driver/truck IDs dressed
 // with the identifiers a desk and a gate would actually use.
 var (
-	driverRef = DriverRef{ID: driver, Name: "Marcus Alvarez", Kind: CompanyDriver}
-	truckRef  = TruckRef{ID: truck, UnitNumber: "T-114", Plate: "IL P839120"}
+	testNow = time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
+	testUser = kernel.NewUserID()
 )
+
+func aCompanyDriver() DriverRef {
+	return DriverRef{ID: NewDriverID(), Name: "Marcus Alvarez", Kind: CompanyDriver}
+}
+
+// func anOperatorOwner() DriverRef {
+// 	return DriverRef{ID: NewDriverID(), Name: "Ella Smith", Kind: OwnerOperator}
+// }
+
+func aTruck() TruckRef {
+	return TruckRef{ID: NewTruckID(), UnitNumber: "T-114", Plate: "IL P839120"}
+}
+
+func aUser() kernel.UserID {
+	return kernel.NewUserID()
+}
 
 // testNow is the deterministic clock's starting instant: 06:00 on the fixture's
 // export day, America/Chicago (= 12:00 UTC).
-var testNow = time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
 
 func liveLoadStops() []Stop {
 	mustTime := func(s string) time.Time {

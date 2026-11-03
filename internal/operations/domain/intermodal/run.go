@@ -63,9 +63,9 @@ type Run struct {
 func (r *Run) ID() RunID         { return r.id }
 func (r *Run) Status() RunStatus { return r.status }
 func (r *Run) CurrentAssignment() (Assignment, bool) {
-	for _, a := range r.assignments {
-		if a.status.IsLive() {
-			return a, true
+	for i := len(r.assignments) - 1; i >= 0; i-- {
+		if r.assignments[i].status.IsLive() {
+			return r.assignments[i], true
 		}
 	}
 	return Assignment{}, false
